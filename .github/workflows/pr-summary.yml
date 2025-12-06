@@ -1,28 +1,40 @@
-name: PR Summary
+name: PR Summary Generator
+
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  generate-pr-text:
+  summarize:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
+      - name: Install Ollama
+        uses: ai-action/setup-ollama@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v4
       - name: Generate PR Summary
-        uses: vblagoje/pr-auto@v1
-        id: pr_auto
-        with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          prompt: "Generate a concise bullet-point summary of the pull request changes, grouped by folders (e.g., frontend/, backend/). Include: - Added files and their purpose - Modified files and key updates - Deleted files. Focus only on code and file changes:"
-      - name: Add Summary as Comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: { pr-text } } = ${{ steps.pr_auto.outputs }};
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '### PR Summary\n\n' + pr-text
-            });
+        run: |
+          # Pull a free model (e.g., codellama for code summarization)
+          ollama pull codellama
+          
+          # Get the PR diff
+          PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+          
+          # Inline prompt: Customize this string as needed
+          PROMPT="Summarize the following code changes in a concise bullet-point list. Focus on key additions, removals, and potential impacts:\n\n$PR_DIFF"
+          
+          # Generate summary using the model
+          PR_SUMMARY=$(ollama run codellama "$PROMPT")
+          
+          # Prepend or append the summary to the existing PR body (adjust as desired)
+          EXISTING_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body --jq .body)
+          NEW_BODY="### AI-Generated Summary\n$PR_SUMMARY\n\n$EXISTING_BODY"
+          
+          # Update the PR description
+          gh pr edit ${{ github.event.pull_request.number }} --body "$NEW_BODY"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
