@@ -10,6 +10,21 @@ const router = createRouter({
       component: HomeView,
     },
     {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('../views/OnboardingQuiz.vue'),
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/Dashboard.vue'),
+    },
+    {
+      path: '/quest/:questId',
+      name: 'scenario-builder',
+      component: () => import('../views/ScenarioBuilder.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting
