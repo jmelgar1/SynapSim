@@ -7,4 +7,13 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ${{ runner.os }}-ollama-${{ hashFiles('.github/workflows/pr-summary.yml') }}
+          restore-keys: ${{ runner.os }}-ollama-
       - uses: ai-action/pull-request-summary@v1
+        with:
+          model: phi3:mini
+          prompt: "Provide a concise bullet-point summary of the key code changes in this pull request, focusing on added/removed/modified files and their main updates:"
