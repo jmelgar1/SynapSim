@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import DisclaimerModal from '../components/DisclaimerModal.vue'
-import PrimaryButton from '../components/PrimaryButton.vue'
-import ThreeNeuralBackground from '../components/ThreeNeuralBackground.vue'
+import { useRouter } from 'vue-router'
+import DisclaimerModal from '@/components/common/DisclaimerModal.vue'
+import PrimaryButton from '@/components/common/PrimaryButton.vue'
+import VibrantHomeScreenBackground from '@/components/common/VibrantHomeScreenBackground.vue'
 
+const router = useRouter()
 const disclaimerDismissed = ref(false)
 
 const handleDisclaimerDismissed = () => {
@@ -11,8 +13,7 @@ const handleDisclaimerDismissed = () => {
 }
 
 const handleBeginForging = () => {
-  // TODO: Navigate to onboarding or dashboard
-  console.log('Begin Forging clicked')
+  router.push('/onboarding')
 }
 </script>
 
@@ -21,7 +22,7 @@ const handleBeginForging = () => {
 
   <main class="landing-page">
     <div class="hero-section">
-      <ThreeNeuralBackground class="neural-background" />
+      <VibrantHomeScreenBackground class="neural-background" />
 
       <div class="hero-content">
         <h1 class="hero-title">SynapSim</h1>

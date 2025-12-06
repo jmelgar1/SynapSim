@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import PrimaryButton from './PrimaryButton.vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import PrimaryButton from '@/components/common/PrimaryButton.vue'
 
 const isOpen = ref(true)
 
@@ -10,6 +10,28 @@ const closeDisclaimer = () => {
 }
 
 const emit = defineEmits(['dismissed'])
+
+// Prevent body scrolling when modal is open
+const toggleBodyScroll = (lock) => {
+  if (lock) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
+
+onMounted(() => {
+  toggleBodyScroll(true)
+})
+
+onUnmounted(() => {
+  toggleBodyScroll(false)
+})
+
+// Watch isOpen to handle body scroll when modal closes
+watch(isOpen, (newValue) => {
+  toggleBodyScroll(newValue)
+})
 </script>
 
 <template>
@@ -70,7 +92,7 @@ const emit = defineEmits(['dismissed'])
   background: var(--color-background);
   border-radius: 12px;
   padding: 0;
-  max-width: 500px;
+  max-width: 650px;
   width: 90%;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
@@ -100,7 +122,7 @@ const emit = defineEmits(['dismissed'])
 
 .modal-body {
   padding: 24px;
-  max-height: 400px;
+  max-height: 70vh;
   overflow-y: auto;
 }
 
