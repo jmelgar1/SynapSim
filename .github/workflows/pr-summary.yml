@@ -16,4 +16,4 @@ jobs:
       - uses: ai-action/pull-request-summary@v1
         with:
           model: phi3:mini
-          prompt: "Provide a concise bullet-point summary of the key code changes in this pull request, focusing on added/removed/modified files and their main updates:"
+          prompt: "Generate a concise bullet-point summary of the pull request changes, including: - Added files and their purpose - Modified files and key updates - Deleted files - Group by folders like frontend/ or backend/ if applicable. Focus only on code and file changes:"
