@@ -1,19 +1,28 @@
 name: PR Summary
-on: [pull_request]
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
 jobs:
-  pr-summary:
+  generate-pr-text:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - name: Generate PR Summary
+        uses: vblagoje/pr-auto@v1
+        id: pr_auto
         with:
-          path: ~/.ollama
-          key: ${{ runner.os }}-ollama-${{ hashFiles('.github/workflows/pr-summary.yml') }}
-          restore-keys: ${{ runner.os }}-ollama-
-      - uses: ai-action/pull-request-summary@v1
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: "Generate a concise bullet-point summary of the pull request changes, grouped by folders (e.g., frontend/, backend/). Include: - Added files and their purpose - Modified files and key updates - Deleted files. Focus only on code and file changes:"
+      - name: Add Summary as Comment
+        uses: actions/github-script@v7
         with:
-          model: phi3:mini
-          prompt: "Generate a concise bullet-point summary of the pull request changes, including: - Added files and their purpose - Modified files and key updates - Deleted files - Group by folders like frontend/ or backend/ if applicable. Focus only on code and file changes:"
+          script: |
+            const { data: { pr-text } } = ${{ steps.pr_auto.outputs }};
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '### PR Summary\n\n' + pr-text
+            });
