@@ -1,32 +1,19 @@
-name: PR Summary Generator
-
+name: Generate PR Description
 on:
-    workflow_dispatch:
-  
-    pull_request:
-      branches:
-        - master
-  
-    push:
-      branches:
-        - master
+  pull_request:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+  contents: read
 
 jobs:
-  pr_summary:
+  generate-description:
     runs-on: ubuntu-latest
-    name: PR Summarizer
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Summarize PR with AI
-        uses: behrouz-rad/ai-pr-summarizer@v1
+      - uses: meido-ai/pr-summarizer@v1
         with:
-          llm-model: 'deepseek-coder-v2:latest'
-          prompt-file: ./assets/prompt-file.txt
-          models-file: ./assets/models-file.txt
-          version-file: ./assets/version-file.txt
-          context-window: 4096
-          upload-changes: true
-          fail-on-error: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model-provider: 'anthropic'
+          model: 'claude-3-sonnet-20240229'
