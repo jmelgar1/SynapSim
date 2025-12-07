@@ -1,8 +1,15 @@
 name: PR Summary Generator
 
 on:
-  pull_request:
-    branches: [master]
+    workflow_dispatch:
+  
+    pull_request:
+      branches:
+        - master
+  
+    push:
+      branches:
+        - master
 
 jobs:
   pr_summary:
@@ -19,8 +26,7 @@ jobs:
           prompt-file: ./assets/prompt-file.txt
           models-file: ./assets/models-file.txt
           version-file: ./assets/version-file.txt
-          context-window: 4096  # Optional: Adjust based on model limits
-          context-lines: 10     # Optional: Lines of context around changes in diffs
-          upload-changes: true  # Optional: Uploads the diff as an artifact for debugging
-          fail-on-error: true   # Optional: Fails the workflow on errors
-          token: ${{ github.token }}  # Uses the default GitHub token for commenting on PRs
+          context-window: 4096
+          upload-changes: true
+          fail-on-error: true
+          token: ${{ secrets.GITHUB_TOKEN }}
