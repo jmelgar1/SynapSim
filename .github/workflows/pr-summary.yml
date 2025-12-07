@@ -2,39 +2,25 @@ name: PR Summary Generator
 
 on:
   pull_request:
-    types: [opened, synchronize]
-
-permissions:
-  contents: read
-  pull-requests: write
+    branches: [master]
 
 jobs:
-  summarize:
+  pr_summary:
     runs-on: ubuntu-latest
+    name: PR Summarizer
     steps:
-      - name: Install Ollama
-        uses: ai-action/setup-ollama@v1
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Generate PR Summary
-        run: |
-          # Pull a free model (e.g., codellama for code summarization)
-          ollama pull codellama
-          
-          # Get the PR diff
-          PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
-          
-          # Inline prompt: Customize this string as needed
-          PROMPT="Summarize the following code changes in a concise bullet-point list. Focus on key additions, removals, and potential impacts:\n\n$PR_DIFF"
-          
-          # Generate summary using the model
-          PR_SUMMARY=$(ollama run codellama "$PROMPT")
-          
-          # Prepend or append the summary to the existing PR body (adjust as desired)
-          EXISTING_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body --jq .body)
-          NEW_BODY="### AI-Generated Summary\n$PR_SUMMARY\n\n$EXISTING_BODY"
-          
-          # Update the PR description
-          gh pr edit ${{ github.event.pull_request.number }} --body "$NEW_BODY"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Summarize PR with AI
+        uses: behrouz-rad/ai-pr-summarizer@v1
+        with:
+          llm-model: 'deepseek-coder-v2:latest'
+          prompt-file: ./assets/prompt-file.txt
+          models-file: ./assets/models-file.txt
+          version-file: ./assets/version-file.txt
+          context-window: 4096  # Optional: Adjust based on model limits
+          context-lines: 10     # Optional: Lines of context around changes in diffs
+          upload-changes: true  # Optional: Uploads the diff as an artifact for debugging
+          fail-on-error: true   # Optional: Fails the workflow on errors
+          token: ${{ github.token }}  # Uses the default GitHub token for commenting on PRs
