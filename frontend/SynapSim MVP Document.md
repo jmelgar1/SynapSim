@@ -2,7 +2,7 @@
 
 # Overview
 
-SynapSim is an interactive web-based simulator designed to educate users on the potential therapeutic effects of psychedelics on neural pathways. It gamifies neuroscience learning by allowing users to simulate virtual brain models through personalized scenarios, visualizing changes in connectivity that could promote healing (e.g., for mental health conditions like anxiety or depression). The MVP focuses on a core simulation engine with basic gamification, emphasizing educational value without promoting substance abuse. This tool targets anyone interested in how psychedelics` affect the brain and how it might look through different scenarios.
+SynapSim is an interactive web-based simulator designed to educate users on the potential therapeutic effects of psychedelics on neural pathways. It gamifies neuroscience learning by allowing users to simulate virtual brain models through personalized scenarios, visualizing changes in connectivity that could promote healing (e.g., for mental health conditions like anxiety or depression). The MVP focuses on a core simulation engine with basic gamification, emphasizing educational value without promoting substance abuse. This tool targets anyone interested in how psychedelics affect the brain and how it might look through different scenarios.
 
 The MVP will be a browser-based app, built with open-source tools. It uses simulated data from public neuroscience resources to ensure legality and accessibility. Simulations are grounded in real studies fetched via APIs, providing evidence-based “what might/could happen” outcomes for user-created scenarios.
 
