@@ -1,5 +1,6 @@
 package com.synapsim.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,5 +35,13 @@ public class AppConfig {
                         .defaultCodecs()
                         .maxInMemorySize(16 * 1024 * 1024)) // 16MB buffer
                 .build();
+    }
+
+    /**
+     * ObjectMapper bean for JSON serialization/deserialization
+     */
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }
