@@ -1,0 +1,603 @@
+{
+	"info": {
+		"_postman_id": "synapsim-api-collection",
+		"name": "SynapSim API Collection",
+		"description": "Complete API collection for SynapSim - Brain network simulation platform for exploring psychedelic-inspired neuroplasticity",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "synapsim"
+	},
+	"item": [
+		{
+			"name": "Simulations",
+			"item": [
+				{
+					"name": "Create Simulation - Anxiety Quest",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questId\": \"anxiety\",\n  \"compoundInspiration\": \"psilocybin\",\n  \"therapeuticSetting\": \"calm-nature\",\n  \"primaryBrainRegion\": \"amygdala\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Daily meditation and journaling\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Creates and runs a simulation for anxiety reduction using psilocybin in a calm nature setting"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Simulation - Empathy Quest",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questId\": \"empathy\",\n  \"compoundInspiration\": \"mdma\",\n  \"therapeuticSetting\": \"social-gathering\",\n  \"primaryBrainRegion\": \"anterior-cingulate-cortex\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Group therapy and social connection exercises\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Creates and runs a simulation for empathy enhancement using MDMA in a social setting"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Simulation - Creativity Quest",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questId\": \"creativity\",\n  \"compoundInspiration\": \"lsd\",\n  \"therapeuticSetting\": \"creative-studio\",\n  \"primaryBrainRegion\": \"visual-cortex\",\n  \"simulationDuration\": \"extended\",\n  \"integrationSteps\": \"Art therapy and creative writing\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Creates and runs a simulation for creativity enhancement using LSD in a creative studio"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Simulation - Depression Quest",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questId\": \"depression\",\n  \"compoundInspiration\": \"ketamine\",\n  \"therapeuticSetting\": \"guided-therapy\",\n  \"primaryBrainRegion\": \"hippocampus\",\n  \"simulationDuration\": \"short\",\n  \"integrationSteps\": \"Cognitive behavioral therapy and exercise\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Creates and runs a simulation for rapid mood improvement using ketamine in guided therapy"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Simulation - Meditation Setting",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questId\": \"general\",\n  \"compoundInspiration\": \"psilocybin\",\n  \"therapeuticSetting\": \"meditation-space\",\n  \"primaryBrainRegion\": \"prefrontal-cortex\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Mindfulness meditation and breathwork\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Creates a general simulation in a meditation space setting"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Simulation by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/simulations/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific simulation by its ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Simulation History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/simulations/history",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations",
+								"history"
+							]
+						},
+						"description": "Retrieves all simulations that have been run"
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/simulations/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations",
+								"health"
+							]
+						},
+						"description": "Quick health check for the simulation service"
+					},
+					"response": []
+				}
+			],
+			"description": "Main simulation endpoints for creating and managing brain network simulations"
+		},
+		{
+			"name": "PubMed Integration",
+			"item": [
+				{
+					"name": "Test PubMed Connection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/connection",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"connection"
+							]
+						},
+						"description": "Tests connectivity to PubMed API"
+					},
+					"response": []
+				},
+				{
+					"name": "Search with Keywords",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/search?keywords=psilocybin,neuroplasticity,anxiety",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"search"
+							],
+							"query": [
+								{
+									"key": "keywords",
+									"value": "psilocybin,neuroplasticity,anxiety"
+								}
+							]
+						},
+						"description": "Search PubMed with custom keywords"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Scenario",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/scenario?compound=psilocybin&setting=meditation-space&region=prefrontal-cortex",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"scenario"
+							],
+							"query": [
+								{
+									"key": "compound",
+									"value": "psilocybin"
+								},
+								{
+									"key": "setting",
+									"value": "meditation-space"
+								},
+								{
+									"key": "region",
+									"value": "prefrontal-cortex"
+								}
+							]
+						},
+						"description": "Search PubMed using scenario parameters (auto-generates keywords)"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Quest - Anxiety",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/quest/anxiety",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"quest",
+								"anxiety"
+							]
+						},
+						"description": "Search with predefined keywords for anxiety quest"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Quest - Empathy",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/quest/empathy",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"quest",
+								"empathy"
+							]
+						},
+						"description": "Search with predefined keywords for empathy quest"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Quest - Creativity",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/quest/creativity",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"quest",
+								"creativity"
+							]
+						},
+						"description": "Search with predefined keywords for creativity quest"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Quest - Depression",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/quest/depression",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"quest",
+								"depression"
+							]
+						},
+						"description": "Search with predefined keywords for depression quest"
+					},
+					"response": []
+				},
+				{
+					"name": "Ping Test",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/test/pubmed/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"test",
+								"pubmed",
+								"ping"
+							]
+						},
+						"description": "Simple ping to check if test controller is running"
+					},
+					"response": []
+				}
+			],
+			"description": "PubMed research article integration and testing endpoints"
+		},
+		{
+			"name": "Compound Variations",
+			"item": [
+				{
+					"name": "Psilocybin - Guided Therapy",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"psilocybin\",\n  \"therapeuticSetting\": \"guided-therapy\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Therapy and integration\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "LSD - Creative Studio",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"lsd\",\n  \"therapeuticSetting\": \"creative-studio\",\n  \"simulationDuration\": \"extended\",\n  \"integrationSteps\": \"Creative expression\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ketamine - Short Duration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"ketamine\",\n  \"therapeuticSetting\": \"guided-therapy\",\n  \"simulationDuration\": \"short\",\n  \"integrationSteps\": \"CBT and follow-up\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MDMA - Social Setting",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"mdma\",\n  \"therapeuticSetting\": \"social-gathering\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Group therapy\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Test different compound types across various settings"
+		},
+		{
+			"name": "Duration Testing",
+			"item": [
+				{
+					"name": "Short Duration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"ketamine\",\n  \"therapeuticSetting\": \"guided-therapy\",\n  \"simulationDuration\": \"short\",\n  \"integrationSteps\": \"Quick integration\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Test short duration simulation (0.7x multiplier)"
+					},
+					"response": []
+				},
+				{
+					"name": "Medium Duration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"psilocybin\",\n  \"therapeuticSetting\": \"calm-nature\",\n  \"simulationDuration\": \"medium\",\n  \"integrationSteps\": \"Standard integration\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Test medium duration simulation (1.0x multiplier)"
+					},
+					"response": []
+				},
+				{
+					"name": "Extended Duration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"compoundInspiration\": \"lsd\",\n  \"therapeuticSetting\": \"creative-studio\",\n  \"simulationDuration\": \"extended\",\n  \"integrationSteps\": \"Deep integration work\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/simulations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"simulations"
+							]
+						},
+						"description": "Test extended duration simulation (1.3x multiplier)"
+					},
+					"response": []
+				}
+			],
+			"description": "Test different simulation durations"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/api",
+			"type": "string"
+		}
+	]
+}
