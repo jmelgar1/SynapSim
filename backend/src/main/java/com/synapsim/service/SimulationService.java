@@ -220,8 +220,10 @@ public class SimulationService {
             reference.setTitle(article.getTitle());
             reference.setAuthors(article.getAuthors());
             reference.setPublicationDate(article.getPublicationDate());
+            reference.setAbstractText(article.getAbstractText());
             reference.setArticleUrl(article.getArticleUrl());
             reference.setRelevanceScore(article.getRelevanceScore());
+            reference.setKeywords(article.getKeywords());
 
             simulation.getPubmedReferences().add(reference);
         }
@@ -430,8 +432,10 @@ public class SimulationService {
                 .title(reference.getTitle())
                 .authors(reference.getAuthors())
                 .publicationDate(reference.getPublicationDate())
+                .abstractText(reference.getAbstractText())
                 .articleUrl(reference.getArticleUrl())
                 .relevanceScore(reference.getRelevanceScore())
+                .keywords(reference.getKeywords())
                 .build();
     }
 
@@ -440,16 +444,16 @@ public class SimulationService {
      */
     private String extractCode(String regionName) {
         Map<String, String> nameToCodes = Map.ofEntries(
-                Map.entry("Prefrontal Cortex", "PFC"),
-                Map.entry("Amygdala", "AMY"),
-                Map.entry("Hippocampus", "HPC"),
-                Map.entry("Anterior Cingulate Cortex", "ACC"),
-                Map.entry("Insula", "INS"),
-                Map.entry("Default Mode Network Hub", "DMN"),
-                Map.entry("Thalamus", "THL"),
-                Map.entry("Ventral Tegmental Area", "VTA"),
+                Map.entry("Medial Prefrontal Cortex", "mPFC"),
                 Map.entry("Posterior Cingulate Cortex", "PCC"),
-                Map.entry("Visual Cortex", "V1")
+                Map.entry("Anterior Hippocampus", "AHP"),
+                Map.entry("Amygdala", "AMY"),
+                Map.entry("Visual Cortex", "V1"),
+                Map.entry("Auditory Cortex", "A1"),
+                Map.entry("Thalamus", "THL"),
+                Map.entry("Anteromedial Caudate", "AMC"),
+                Map.entry("Frontoparietal Regions", "FP"),
+                Map.entry("Cerebellum", "CBL")
         );
 
         return nameToCodes.getOrDefault(regionName, regionName);

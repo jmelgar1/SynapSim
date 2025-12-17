@@ -40,4 +40,7 @@ public class BrainRegion {
 
     @Column(name = "neuroplasticity_potential")
     private Double neuroplasticityPotential; // How easily this region forms new connections (0.0 - 1.0)
+
+    @Column(length = 500)
+    private String network; // Primary network(s) this region belongs to (e.g., "Default Mode Network", "Salience Network")
 }

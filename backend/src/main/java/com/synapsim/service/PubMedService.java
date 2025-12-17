@@ -7,8 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import reactor.core.publisher.Mono;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -122,17 +129,18 @@ public class PubMedService {
     }
 
     /**
-     * Fetch article details by IDs
+     * Fetch article details by IDs including full abstracts
      */
     private List<PubMedArticleDTO> fetchArticleDetails(List<String> articleIds, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         try {
             // Join IDs with commas
             String ids = String.join(",", articleIds);
 
-            String url = String.format("%s/esummary.fcgi?db=pubmed&id=%s&retmode=json",
+            // Use efetch instead of esummary to get full abstracts
+            String url = String.format("%s/efetch.fcgi?db=pubmed&id=%s&retmode=xml",
                     pubmedBaseUrl, ids);
 
-            log.debug("PubMed summary URL: {}", url);
+            log.debug("PubMed fetch URL: {}", url);
 
             // Make API call
             String response = webClient.get()
@@ -145,8 +153,8 @@ public class PubMedService {
                 return new ArrayList<>();
             }
 
-            // Parse JSON response with relevance scoring
-            return parseArticleSummaries(response, articleIds, searchKeywords, keywordWeights);
+            // Parse XML response with relevance scoring
+            return parseArticleXml(response, searchKeywords, keywordWeights);
 
         } catch (Exception e) {
             log.error("Error fetching article details: {}", e.getMessage(), e);
@@ -155,60 +163,151 @@ public class PubMedService {
     }
 
     /**
-     * Parse article summaries from PubMed API response
+     * Parse article details from PubMed XML response including abstracts
      */
-    private List<PubMedArticleDTO> parseArticleSummaries(String response, List<String> articleIds, List<String> searchKeywords, Map<String, Double> keywordWeights) {
+    private List<PubMedArticleDTO> parseArticleXml(String xmlResponse, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         List<PubMedArticleDTO> articles = new ArrayList<>();
 
         try {
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode result = root.path("result");
+            // Parse XML
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes()));
+            doc.getDocumentElement().normalize();
 
-            for (String id : articleIds) {
-                JsonNode article = result.path(id);
+            // Get all PubmedArticle elements
+            NodeList articleNodes = doc.getElementsByTagName("PubmedArticle");
 
-                if (article.isMissingNode()) {
-                    continue;
-                }
+            for (int i = 0; i < articleNodes.getLength(); i++) {
+                Element articleElement = (Element) articleNodes.item(i);
 
-                // Extract article information
-                String title = article.path("title").asText("");
-                String pubDate = article.path("pubdate").asText("");
+                // Extract PubMed ID
+                String pubmedId = getTextContent(articleElement, "PMID");
+
+                // Extract title
+                String title = getTextContent(articleElement, "ArticleTitle");
+
+                // Extract abstract - combine all AbstractText elements
+                String abstractText = extractAbstract(articleElement);
+
+                // Extract publication date
+                String pubDate = extractPublicationDate(articleElement);
 
                 // Extract authors
-                JsonNode authorsNode = article.path("authors");
-                String authors = "";
-                if (authorsNode.isArray()) {
-                    List<String> authorNames = new ArrayList<>();
-                    authorsNode.forEach(author -> {
-                        authorNames.add(author.path("name").asText());
-                    });
-                    authors = String.join(", ", authorNames);
-                }
+                String authors = extractAuthors(articleElement);
 
-                // Build article DTO with calculated relevance score
+                // Build article DTO
                 PubMedArticleDTO dto = PubMedArticleDTO.builder()
-                        .pubmedId(id)
+                        .pubmedId(pubmedId)
                         .title(title)
                         .authors(authors)
                         .publicationDate(pubDate)
-                        .articleUrl("https://pubmed.ncbi.nlm.nih.gov/" + id + "/")
+                        .abstractText(abstractText)
+                        .articleUrl("https://pubmed.ncbi.nlm.nih.gov/" + pubmedId + "/")
+                        .keywords(String.join(", ", searchKeywords))
                         .build();
 
-                // Calculate relevance score based on title
+                // Calculate relevance score based on abstract content
                 double relevance = calculateRelevanceScore(dto, searchKeywords, keywordWeights);
                 dto.setRelevanceScore(relevance);
 
                 articles.add(dto);
 
-                log.debug("Article: {} | Relevance: {}", title, relevance);
+                log.debug("Article: {} | Abstract length: {} | Relevance: {}",
+                        title, abstractText != null ? abstractText.length() : 0, relevance);
             }
 
         } catch (Exception e) {
-            log.error("Error parsing article summaries: {}", e.getMessage(), e);
+            log.error("Error parsing article XML: {}", e.getMessage(), e);
         }
 
         return articles;
+    }
+
+    /**
+     * Extract text content from XML element by tag name
+     */
+    private String getTextContent(Element parent, String tagName) {
+        NodeList nodeList = parent.getElementsByTagName(tagName);
+        if (nodeList.getLength() > 0) {
+            Node node = nodeList.item(0);
+            return node.getTextContent();
+        }
+        return "";
+    }
+
+    /**
+     * Extract abstract text from article element
+     * Abstracts can have multiple AbstractText elements (structured abstracts)
+     */
+    private String extractAbstract(Element articleElement) {
+        NodeList abstractNodes = articleElement.getElementsByTagName("AbstractText");
+        if (abstractNodes.getLength() == 0) {
+            return "";
+        }
+
+        StringBuilder abstractBuilder = new StringBuilder();
+        for (int i = 0; i < abstractNodes.getLength(); i++) {
+            Element abstractTextElement = (Element) abstractNodes.item(i);
+
+            // Some abstracts have labels (BACKGROUND, METHODS, etc.)
+            String label = abstractTextElement.getAttribute("Label");
+            if (label != null && !label.isEmpty()) {
+                abstractBuilder.append(label).append(": ");
+            }
+
+            abstractBuilder.append(abstractTextElement.getTextContent());
+
+            if (i < abstractNodes.getLength() - 1) {
+                abstractBuilder.append(" ");
+            }
+        }
+
+        return abstractBuilder.toString();
+    }
+
+    /**
+     * Extract publication date from article element
+     */
+    private String extractPublicationDate(Element articleElement) {
+        NodeList pubDateNodes = articleElement.getElementsByTagName("PubDate");
+        if (pubDateNodes.getLength() > 0) {
+            Element pubDateElement = (Element) pubDateNodes.item(0);
+
+            String year = getTextContent(pubDateElement, "Year");
+            String month = getTextContent(pubDateElement, "Month");
+
+            if (!year.isEmpty()) {
+                return month.isEmpty() ? year : month + " " + year;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Extract authors from article element
+     */
+    private String extractAuthors(Element articleElement) {
+        NodeList authorNodes = articleElement.getElementsByTagName("Author");
+        List<String> authorNames = new ArrayList<>();
+
+        for (int i = 0; i < Math.min(authorNodes.getLength(), 3); i++) { // Limit to first 3 authors
+            Element authorElement = (Element) authorNodes.item(i);
+
+            String lastName = getTextContent(authorElement, "LastName");
+            String foreName = getTextContent(authorElement, "ForeName");
+
+            if (!lastName.isEmpty()) {
+                String fullName = foreName.isEmpty() ? lastName : lastName + " " + foreName.charAt(0);
+                authorNames.add(fullName);
+            }
+        }
+
+        if (authorNodes.getLength() > 3) {
+            authorNames.add("et al");
+        }
+
+        return String.join(", ", authorNames);
     }
 
     /**
@@ -303,7 +402,7 @@ public class PubMedService {
     }
 
     /**
-     * Calculate relevance score for an article based on keyword matches in the title
+     * Calculate relevance score for an article based on keyword matches in title AND abstract
      * Score is based on weighted keyword matching with bonuses for title prominence
      *
      * @param article The article to score
@@ -314,46 +413,69 @@ public class PubMedService {
     private double calculateRelevanceScore(PubMedArticleDTO article, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         try {
             String title = article.getTitle().toLowerCase();
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+
             double baseScore = 0.0;
-            int matchedKeywords = 0;
+            int titleMatches = 0;
+            int abstractMatches = 0;
             int totalOccurrences = 0;
 
-            // Calculate base score from keyword matches
+            // Calculate base score from keyword matches in both title and abstract
             for (String keyword : searchKeywords) {
                 String normalizedKeyword = keyword.toLowerCase().trim();
 
+                // Check title matches (weighted higher)
                 if (title.contains(normalizedKeyword)) {
-                    matchedKeywords++;
+                    titleMatches++;
 
-                    // Add weight for this keyword
+                    // Title matches get full weight
                     double weight = keywordWeights.getOrDefault(normalizedKeyword, generalKeywordWeight);
                     baseScore += weight;
 
-                    // Count occurrences for frequency bonus
-                    int occurrences = countOccurrences(title, normalizedKeyword);
-                    totalOccurrences += occurrences;
+                    // Count occurrences in title
+                    int titleOccurrences = countOccurrences(title, normalizedKeyword);
+                    totalOccurrences += titleOccurrences;
+                }
+
+                // Check abstract matches (weighted lower than title but still important)
+                if (!abstractText.isEmpty() && abstractText.contains(normalizedKeyword)) {
+                    abstractMatches++;
+
+                    // Abstract matches get 70% of full weight
+                    double weight = keywordWeights.getOrDefault(normalizedKeyword, generalKeywordWeight);
+                    baseScore += weight * 0.7;
+
+                    // Count occurrences in abstract
+                    int abstractOccurrences = countOccurrences(abstractText, normalizedKeyword);
+                    totalOccurrences += abstractOccurrences;
                 }
             }
 
             // Apply bonuses
             double bonus = 0.0;
 
-            // Title match bonus: if keywords appear in title (which we're already searching)
-            if (matchedKeywords > 0) {
+            // Title match bonus: if keywords appear in title (high prominence)
+            if (titleMatches > 0) {
                 bonus += titleMatchBonus;
             }
 
+            // Abstract coverage bonus: reward articles where keywords appear in abstract
+            if (abstractMatches > 0) {
+                double abstractCoverage = (double) abstractMatches / searchKeywords.size();
+                bonus += abstractCoverage * 0.10; // Up to 0.10 bonus for full abstract coverage
+            }
+
             // Multiple occurrence bonus: keywords appearing multiple times indicate higher relevance
-            if (totalOccurrences > matchedKeywords) {
-                int extraOccurrences = totalOccurrences - matchedKeywords;
+            if (totalOccurrences > (titleMatches + abstractMatches)) {
+                int extraOccurrences = totalOccurrences - (titleMatches + abstractMatches);
                 bonus += Math.min(extraOccurrences * multipleOccurrenceBonus, 0.15); // Cap bonus at 0.15
             }
 
             // Calculate final score and cap at 1.0
             double finalScore = Math.min(1.0, baseScore + bonus);
 
-            log.debug("Relevance calculation - Keywords matched: {}/{}, Base score: {}, Bonus: {}, Final: {}",
-                    matchedKeywords, searchKeywords.size(), baseScore, bonus, finalScore);
+            log.debug("Relevance calculation - Title matches: {}, Abstract matches: {}, Base: {}, Bonus: {}, Final: {}",
+                    titleMatches, abstractMatches, baseScore, bonus, finalScore);
 
             return finalScore;
 
