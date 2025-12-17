@@ -330,6 +330,14 @@ public class BrainNetworkService {
         }
 
         // Convert edges to connections
+        // Load all neural connections to get metadata
+        List<NeuralConnection> connections = neuralConnectionRepository.findAll();
+        Map<String, NeuralConnection> connectionMap = new HashMap<>();
+        for (NeuralConnection conn : connections) {
+            String key = conn.getSourceRegion().getName() + "-" + conn.getTargetRegion().getName();
+            connectionMap.put(key, conn);
+        }
+
         for (DefaultWeightedEdge edge : graph.edgeSet()) {
             String source = graph.getEdgeSource(edge);
             String target = graph.getEdgeTarget(edge);
@@ -339,10 +347,17 @@ public class BrainNetworkService {
             BrainRegion targetRegion = regionMap.get(target);
 
             if (sourceRegion != null && targetRegion != null) {
+                // Look up the connection metadata
+                String connectionKey = source + "-" + target;
+                NeuralConnection connection = connectionMap.get(connectionKey);
+
                 edges.add(BrainNetworkDTO.EdgeDTO.builder()
+                        .id(connection != null ? connection.getId().toString() : null)
                         .source(sourceRegion.getId().toString())
                         .target(targetRegion.getId().toString())
                         .weight(weight)
+                        .connectionType(connection != null ? connection.getConnectionType().name() : null)
+                        .isBidirectional(connection != null ? connection.getIsBidirectional() : null)
                         .build());
             }
         }
