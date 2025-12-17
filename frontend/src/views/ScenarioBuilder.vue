@@ -95,10 +95,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Compound Inspiration
-            <span class="info-icon" @mouseenter="showTooltip('compound')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'compound'" class="tooltip">
-              Research-based models inspired by psychedelic compounds and their effects on neural connectivity
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('compound')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'compound'" class="tooltip">
+                <span>Each compound affects brain networks differently. Psilocybin reduces Default Mode Network activity (ego dissolution), LSD enhances sensory integration, Ketamine rapidly rewires mood circuits, and MDMA strengthens empathy pathways. Choose based on which neural changes interest you most.</span>
+              </div>
+            </span>
           </label>
           <div class="options-grid">
             <div
@@ -120,10 +122,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Therapeutic Setting
-            <span class="info-icon" @mouseenter="showTooltip('setting')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'setting'" class="tooltip">
-              The environmental context that can influence neural pathway development
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('setting')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'setting'" class="tooltip">
+                <span>Set and setting matter! Calm environments enhance stress reduction pathways, guided therapy strengthens emotional processing circuits, meditation spaces boost introspective networks, creative settings amplify divergent thinking, and social contexts enhance empathy connections.</span>
+              </div>
+            </span>
           </label>
           <div class="options-grid">
             <div
@@ -144,10 +148,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Primary Brain Region
-            <span class="info-icon" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'brain'" class="tooltip">
-              The main neural area to focus on in this simulation
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'brain'" class="tooltip">
+                <span>Focus on a specific brain region to see targeted effects. The Amygdala processes fear/anxiety, Prefrontal Cortex handles decision-making, Hippocampus manages memory, and the Default Mode Network controls self-referential thinking. This helps personalize the simulation to your interests.</span>
+              </div>
+            </span>
           </label>
           <select v-model="scenario.primaryBrainRegion" class="form-select">
             <option :value="null" disabled>Select a brain region</option>
@@ -161,10 +167,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Simulation Duration
-            <span class="info-icon" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'duration'" class="tooltip">
-              Simulated session length affecting the depth of neural changes
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'duration'" class="tooltip">
+                <span>Duration affects neuroplastic depth. Short sessions (3-5 hours) show acute connectivity changes, Medium (6-8 hours) allows for deeper network reorganization, and Extended (8+ hours) simulates profound rewiring with lasting integration potential. Longer isn't always better—it depends on your learning goals.</span>
+              </div>
+            </span>
           </label>
           <div class="duration-options">
             <div
@@ -296,6 +304,12 @@ const goBack = () => {
   position: relative;
 }
 
+.info-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .info-icon {
   display: inline-block;
   width: 18px;
@@ -308,7 +322,6 @@ const goBack = () => {
   margin-left: 0.5rem;
   cursor: help;
   color: #667eea;
-  position: relative;
 }
 
 .tooltip {
@@ -316,16 +329,20 @@ const goBack = () => {
   left: 0;
   top: 100%;
   margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-heading);
-  color: white;
+  padding: 0.875rem 1.125rem;
+  background: #2c3e50;
+  color: #ffffff;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 400;
-  line-height: 1.4;
-  z-index: 10;
-  max-width: 300px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.5;
+  z-index: 1000;
+  max-width: 400px;
+  width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: visible;
 }
 
 .tooltip::before {
@@ -335,7 +352,7 @@ const goBack = () => {
   left: 20px;
   width: 12px;
   height: 12px;
-  background: var(--color-heading);
+  background: #2c3e50;
   transform: rotate(45deg);
 }
 
