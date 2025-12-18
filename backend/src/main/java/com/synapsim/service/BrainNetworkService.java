@@ -166,40 +166,41 @@ public class BrainNetworkService {
 
         switch (compound) {
             case PSILOCYBIN:
-                // Psilocybin reduces DMN connectivity, increases PFC-AMY (emotion regulation)
-                modifiers.put("DMN-PCC", -0.15);  // Decrease DMN connectivity
-                modifiers.put("PFC-AMY", 0.20);   // Increase emotional regulation
-                modifiers.put("PFC-ACC", 0.15);   // Enhanced cognitive control
-                modifiers.put("AMY-HPC", -0.10);  // Reduced fear memory formation
-                modifiers.put("ACC-INS", 0.18);   // Enhanced empathy circuits
-                modifiers.put("HPC-DMN", -0.12);  // Reduced rumination
+                // Psilocybin reduces DMN connectivity, increases emotion regulation
+                modifiers.put("PCC-mPFC", -0.15);  // Decrease core DMN connectivity (ego dissolution)
+                modifiers.put("AMY-mPFC", 0.20);   // Increase emotional regulation
+                modifiers.put("FP-mPFC", 0.15);    // Enhanced cognitive control
+                modifiers.put("AHP-AMY", -0.10);   // Reduced fear memory formation
+                modifiers.put("AMY-FP", 0.18);     // Enhanced emotion regulation via attention
+                modifiers.put("AHP-PCC", -0.12);   // Reduced rumination
                 break;
 
             case LSD:
                 // LSD increases global connectivity, especially creative networks
-                modifiers.put("PFC-V1", 0.25);    // Enhanced visual-cognitive integration
-                modifiers.put("DMN-V1", 0.20);    // Visual imagery during introspection
-                modifiers.put("PFC-ACC", 0.18);   // Creative problem-solving
-                modifiers.put("VTA-PFC", 0.15);   // Motivation and exploration
-                modifiers.put("DMN-PCC", -0.10);  // Reduced self-focused thinking
+                modifiers.put("PCC-V1", 0.25);     // Enhanced visual-DMN integration (hallucinations)
+                modifiers.put("mPFC-V1", 0.20);    // Visual imagery during introspection
+                modifiers.put("FP-mPFC", 0.18);    // Creative problem-solving
+                modifiers.put("AMC-mPFC", 0.15);   // Motivation and exploration
+                modifiers.put("PCC-mPFC", -0.10);  // Reduced self-focused thinking
+                modifiers.put("A1-V1", 0.22);      // Cross-modal sensory integration (synesthesia)
                 break;
 
             case KETAMINE:
                 // Ketamine has rapid antidepressant effects, reduces DMN hyperconnectivity
-                modifiers.put("DMN-PCC", -0.25);  // Strong DMN reduction
-                modifiers.put("PFC-HPC", 0.22);   // Enhanced neuroplasticity
-                modifiers.put("AMY-PFC", 0.18);   // Improved emotion regulation
-                modifiers.put("PFC-ACC", 0.15);   // Cognitive flexibility
-                modifiers.put("HPC-VTA", 0.12);   // Reward-memory integration
+                modifiers.put("PCC-mPFC", -0.25);  // Strong DMN reduction
+                modifiers.put("AHP-mPFC", 0.22);   // Enhanced neuroplasticity
+                modifiers.put("AMY-mPFC", 0.18);   // Improved emotion regulation
+                modifiers.put("FP-mPFC", 0.15);    // Cognitive flexibility
+                modifiers.put("AHP-AMC", 0.12);    // Reward-memory integration
                 break;
 
             case MDMA:
                 // MDMA enhances empathy, social bonding, reduces fear response
-                modifiers.put("ACC-INS", 0.30);   // Strong empathy enhancement
-                modifiers.put("PFC-AMY", 0.25);   // Enhanced emotional regulation
-                modifiers.put("AMY-HPC", -0.18);  // Reduced fear conditioning
-                modifiers.put("VTA-PFC", 0.20);   // Prosocial motivation
-                modifiers.put("INS-DMN", 0.15);   // Enhanced self-awareness
+                modifiers.put("AMY-FP", 0.30);     // Strong empathy enhancement via emotion-attention
+                modifiers.put("AMY-mPFC", 0.25);   // Enhanced emotional regulation
+                modifiers.put("AHP-AMY", -0.18);   // Reduced fear conditioning
+                modifiers.put("AMC-mPFC", 0.20);   // Prosocial motivation
+                modifiers.put("PCC-mPFC", 0.15);   // Enhanced self-awareness (opposite of other psychedelics)
                 break;
         }
 
@@ -216,37 +217,37 @@ public class BrainNetworkService {
         switch (setting) {
             case CALM_NATURE:
                 // Calm environment enhances stress reduction
-                modifiers.put("AMY-PFC", 0.10);   // Better emotional regulation
-                modifiers.put("PFC-ACC", 0.08);   // Mindful awareness
-                modifiers.put("DMN-PCC", -0.05);  // Reduced rumination
+                modifiers.put("AMY-mPFC", 0.10);   // Better emotional regulation
+                modifiers.put("FP-mPFC", 0.08);    // Mindful awareness
+                modifiers.put("PCC-mPFC", -0.05);  // Reduced rumination
                 break;
 
             case GUIDED_THERAPY:
                 // Therapeutic guidance enhances healing pathways
-                modifiers.put("PFC-AMY", 0.12);   // Stronger emotion regulation
-                modifiers.put("ACC-INS", 0.10);   // Enhanced introspection
-                modifiers.put("HPC-PFC", 0.08);   // Memory reprocessing
+                modifiers.put("AMY-mPFC", 0.12);   // Stronger emotion regulation
+                modifiers.put("AMY-FP", 0.10);     // Enhanced introspection via attention
+                modifiers.put("AHP-mPFC", 0.08);   // Memory reprocessing
                 break;
 
             case MEDITATION_SPACE:
                 // Meditation enhances introspective and awareness pathways
-                modifiers.put("ACC-INS", 0.15);   // Strong interoceptive awareness
-                modifiers.put("PFC-ACC", 0.12);   // Mindful attention
-                modifiers.put("DMN-PCC", -0.08);  // Present-moment focus
+                modifiers.put("AMY-FP", 0.15);     // Strong interoceptive awareness via emotion-attention
+                modifiers.put("FP-mPFC", 0.12);    // Mindful attention
+                modifiers.put("PCC-mPFC", -0.08);  // Present-moment focus
                 break;
 
             case CREATIVE_STUDIO:
                 // Creative environment enhances divergent thinking
-                modifiers.put("PFC-V1", 0.12);    // Visual creativity
-                modifiers.put("VTA-PFC", 0.10);   // Creative motivation
-                modifiers.put("DMN-PFC", 0.08);   // Imaginative thinking
+                modifiers.put("mPFC-V1", 0.12);    // Visual creativity
+                modifiers.put("AMC-mPFC", 0.10);   // Creative motivation
+                modifiers.put("PCC-mPFC", 0.08);   // Imaginative thinking
                 break;
 
             case SOCIAL_GATHERING:
                 // Social setting enhances empathy and bonding
-                modifiers.put("ACC-INS", 0.12);   // Social empathy
-                modifiers.put("VTA-ACC", 0.10);   // Social reward
-                modifiers.put("INS-AMY", 0.08);   // Emotional resonance
+                modifiers.put("AMY-FP", 0.12);     // Social empathy via emotion-attention
+                modifiers.put("AMC-FP", 0.10);     // Social reward
+                modifiers.put("AMY-FP", 0.08);     // Emotional resonance
                 break;
         }
 
@@ -286,16 +287,16 @@ public class BrainNetworkService {
     private String extractRegionCode(String regionName) {
         // Map full names to codes
         Map<String, String> nameToCodes = Map.ofEntries(
-                Map.entry("Prefrontal Cortex", "PFC"),
-                Map.entry("Amygdala", "AMY"),
-                Map.entry("Hippocampus", "HPC"),
-                Map.entry("Anterior Cingulate Cortex", "ACC"),
-                Map.entry("Insula", "INS"),
-                Map.entry("Default Mode Network Hub", "DMN"),
-                Map.entry("Thalamus", "THL"),
-                Map.entry("Ventral Tegmental Area", "VTA"),
+                Map.entry("Medial Prefrontal Cortex", "mPFC"),
                 Map.entry("Posterior Cingulate Cortex", "PCC"),
-                Map.entry("Visual Cortex", "V1")
+                Map.entry("Anterior Hippocampus", "AHP"),
+                Map.entry("Amygdala", "AMY"),
+                Map.entry("Visual Cortex", "V1"),
+                Map.entry("Auditory Cortex", "A1"),
+                Map.entry("Thalamus", "THL"),
+                Map.entry("Anteromedial Caudate", "AMC"),
+                Map.entry("Frontoparietal Regions", "FP"),
+                Map.entry("Cerebellum", "CBL")
         );
 
         return nameToCodes.getOrDefault(regionName, regionName);
@@ -329,6 +330,14 @@ public class BrainNetworkService {
         }
 
         // Convert edges to connections
+        // Load all neural connections to get metadata
+        List<NeuralConnection> connections = neuralConnectionRepository.findAll();
+        Map<String, NeuralConnection> connectionMap = new HashMap<>();
+        for (NeuralConnection conn : connections) {
+            String key = conn.getSourceRegion().getName() + "-" + conn.getTargetRegion().getName();
+            connectionMap.put(key, conn);
+        }
+
         for (DefaultWeightedEdge edge : graph.edgeSet()) {
             String source = graph.getEdgeSource(edge);
             String target = graph.getEdgeTarget(edge);
@@ -338,10 +347,17 @@ public class BrainNetworkService {
             BrainRegion targetRegion = regionMap.get(target);
 
             if (sourceRegion != null && targetRegion != null) {
+                // Look up the connection metadata
+                String connectionKey = source + "-" + target;
+                NeuralConnection connection = connectionMap.get(connectionKey);
+
                 edges.add(BrainNetworkDTO.EdgeDTO.builder()
+                        .id(connection != null ? connection.getId().toString() : null)
                         .source(sourceRegion.getId().toString())
                         .target(targetRegion.getId().toString())
                         .weight(weight)
+                        .connectionType(connection != null ? connection.getConnectionType().name() : null)
+                        .isBidirectional(connection != null ? connection.getIsBidirectional() : null)
                         .build());
             }
         }

@@ -108,34 +108,54 @@ export const THERAPEUTIC_SETTINGS = [
 
 export const BRAIN_REGIONS = [
   {
-    value: 'prefrontal-cortex',
-    label: 'Prefrontal Cortex',
-    description: 'Executive functions, decision-making, and emotional regulation.',
+    value: 'medial-prefrontal-cortex',
+    label: 'Medial Prefrontal Cortex',
+    description: 'Hub for self-awareness; shows decreased activity and decoupling, promoting flexible thinking.',
+  },
+  {
+    value: 'posterior-cingulate-cortex',
+    label: 'Posterior Cingulate Cortex',
+    description: 'Integrates personal experiences; connectivity weakens, linked to ego dissolution.',
+  },
+  {
+    value: 'anterior-hippocampus',
+    label: 'Anterior Hippocampus',
+    description: 'Handles memory; reduced functional connectivity with DMN during and post-trip, aiding insights.',
   },
   {
     value: 'amygdala',
     label: 'Amygdala',
-    description: 'Emotional processing and fear responses.',
-  },
-  {
-    value: 'hippocampus',
-    label: 'Hippocampus',
-    description: 'Memory formation and spatial navigation.',
-  },
-  {
-    value: 'default-mode-network',
-    label: 'Default Mode Network',
-    description: 'Self-referential thinking and introspection.',
+    description: 'Processes emotions; decreased reactivity and altered connectivity, reducing fear.',
   },
   {
     value: 'visual-cortex',
     label: 'Visual Cortex',
-    description: 'Visual processing and perception.',
+    description: 'Increased activity and connections, contributing to hallucinations.',
   },
   {
-    value: 'limbic-system',
-    label: 'Limbic System',
-    description: 'Emotions, motivation, and memory.',
+    value: 'auditory-cortex',
+    label: 'Auditory Cortex',
+    description: 'Heightened integration with other areas, enhancing perceptual changes.',
+  },
+  {
+    value: 'thalamus',
+    label: 'Thalamus',
+    description: 'Relays signals; desynchronizes, allowing novel information flow.',
+  },
+  {
+    value: 'anteromedial-caudate',
+    label: 'Anteromedial Caudate',
+    description: 'Involved in motivation; shows connectivity changes for behavioral flexibility.',
+  },
+  {
+    value: 'frontoparietal-regions',
+    label: 'Frontoparietal Regions',
+    description: 'Attention control; increased integration with sensory and limbic systems.',
+  },
+  {
+    value: 'cerebellum',
+    label: 'Cerebellum',
+    description: 'Motor and cognitive roles; exhibits functional connectivity shifts.',
   },
 ]
 

@@ -25,6 +25,8 @@ import java.util.Map;
 public class SimulationController {
 
     private final SimulationService simulationService;
+    private final com.synapsim.repository.BrainRegionRepository brainRegionRepository;
+    private final com.synapsim.repository.NeuralConnectionRepository neuralConnectionRepository;
 
     /**
      * Create and run a new simulation
@@ -111,6 +113,24 @@ public class SimulationController {
                 "status", "ok",
                 "service", "simulation-service",
                 "timestamp", java.time.LocalDateTime.now().toString()
+        ));
+    }
+
+    /**
+     * Debug endpoint to check database data
+     * GET /api/simulations/debug/data
+     */
+    @GetMapping("/debug/data")
+    public ResponseEntity<Map<String, Object>> debugData() {
+        long regionCount = brainRegionRepository.count();
+        long connectionCount = neuralConnectionRepository.count();
+
+        return ResponseEntity.ok(Map.of(
+                "brainRegions", regionCount,
+                "neuralConnections", connectionCount,
+                "regions", brainRegionRepository.findAll().stream()
+                        .map(r -> r.getName() + " (" + r.getCode() + ")")
+                        .toList()
         ));
     }
 }
