@@ -25,3 +25,4 @@ build/
 docs/
 .next/
 session_logs/
+use-java-21.sh

@@ -4,8 +4,6 @@
  * when connecting to the Spring Boot backend
  */
 
-// Example structure for future implementation:
-/*
 import axios from 'axios'
 
 const apiClient = axios.create({
@@ -13,7 +11,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000, // 30 seconds for simulations
 })
 
 // Request interceptor for adding auth tokens, etc.
@@ -38,12 +36,12 @@ apiClient.interceptors.response.use(
     // Handle common errors (401, 403, 500, etc.)
     if (error.response?.status === 401) {
       // Handle unauthorized
+      console.error('Unauthorized request')
+    } else if (error.response?.status === 500) {
+      console.error('Server error:', error.response.data)
     }
     return Promise.reject(error)
   }
 )
 
 export default apiClient
-*/
-
-export default null // Placeholder for now

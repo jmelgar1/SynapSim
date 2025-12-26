@@ -15,6 +15,7 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "axios": "^1.13.2",
     "chroma-js": "^3.2.0",
     "pinia": "^3.0.4",
     "three": "^0.181.2",

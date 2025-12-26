@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PrimaryButton from '@/components/common/PrimaryButton.vue'
+import { simulationService } from '@/services/simulation'
 import {
   COMPOUND_INSPIRATIONS,
   THERAPEUTIC_SETTINGS,
@@ -25,6 +26,10 @@ const scenario = ref({
   simulationDuration: null,
 })
 
+// Loading state
+const isSubmitting = ref(false)
+const errorMessage = ref(null)
+
 // Validation
 const isFormValid = computed(() => {
   return (
@@ -46,22 +51,48 @@ const hideTooltip = () => {
   activeTooltip.value = null
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!isFormValid.value) return
 
-  // Save scenario to localStorage (for now)
-  const savedScenarios = JSON.parse(localStorage.getItem('synapSimScenarios') || '[]')
-  savedScenarios.push({
-    questId,
-    scenario: scenario.value,
-    createdAt: new Date().toISOString(),
-  })
-  localStorage.setItem('synapSimScenarios', JSON.stringify(savedScenarios))
+  isSubmitting.value = true
+  errorMessage.value = null
 
-  // TODO: Navigate to simulation results view
-  console.log('Scenario submitted:', scenario.value)
-  alert('Scenario created! Simulation visualization coming soon...')
-  router.push('/dashboard')
+  try {
+    // Prepare request payload matching backend ScenarioRequest
+    const requestData = {
+      questId: questId,
+      compoundInspiration: scenario.value.compoundInspiration,
+      therapeuticSetting: scenario.value.therapeuticSetting,
+      primaryBrainRegion: scenario.value.primaryBrainRegion,
+      simulationDuration: scenario.value.simulationDuration,
+      integrationSteps: null, // Optional field
+    }
+
+    console.log('Submitting simulation request:', requestData)
+
+    // Call backend API
+    const response = await simulationService.createSimulation(requestData)
+
+    console.log('Simulation created successfully:', response)
+
+    // Save scenario to localStorage for history
+    const savedScenarios = JSON.parse(localStorage.getItem('synapSimScenarios') || '[]')
+    savedScenarios.push({
+      questId,
+      scenario: scenario.value,
+      simulationId: response.id,
+      createdAt: new Date().toISOString(),
+    })
+    localStorage.setItem('synapSimScenarios', JSON.stringify(savedScenarios))
+
+    // Navigate to simulation results view
+    router.push(`/simulation/${response.id}`)
+  } catch (error) {
+    console.error('Error creating simulation:', error)
+    errorMessage.value = error.response?.data?.message || error.message || 'Failed to create simulation. Please ensure the backend is running.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 const goBack = () => {
@@ -188,10 +219,21 @@ const goBack = () => {
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="error-message">
+          <span class="error-icon">⚠️</span>
+          <p>{{ errorMessage }}</p>
+        </div>
+
         <!-- Submit Button -->
         <div class="form-actions">
-          <PrimaryButton :disabled="!isFormValid" @click="handleSubmit" class="forge-button">
-            🧠 Forge Pathway
+          <PrimaryButton
+            :disabled="!isFormValid || isSubmitting"
+            @click="handleSubmit"
+            class="forge-button"
+          >
+            <span v-if="isSubmitting">⏳ Processing...</span>
+            <span v-else>🧠 Forge Pathway</span>
           </PrimaryButton>
         </div>
       </div>
@@ -491,6 +533,30 @@ const goBack = () => {
 .form-textarea:focus {
   border-color: #667eea;
   outline: none;
+}
+
+/* Error Message */
+.error-message {
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid #e74c3c;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.error-message p {
+  margin: 0;
+  color: #e74c3c;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 /* Actions */

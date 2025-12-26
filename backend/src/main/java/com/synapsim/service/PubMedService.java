@@ -320,10 +320,9 @@ public class PubMedService {
         keywords.add(compoundType);
         keywords.add("neuroplasticity");
 
-        // Add brain region if specified
-        if (brainRegion != null && !brainRegion.isEmpty()) {
-            keywords.add(brainRegion.replace("-", " "));
-        }
+        // NOTE: Brain region excluded from keywords to broaden search results
+        // The specific brain region is still used in the simulation logic,
+        // but not in PubMed searches to avoid overly narrow results
 
         // Add setting-related keywords
         if (therapeuticSetting != null && !therapeuticSetting.isEmpty()) {
@@ -339,7 +338,7 @@ public class PubMedService {
         keywords.add("brain");
         keywords.add("connectivity");
 
-        log.debug("Generated keywords: {}", keywords);
+        log.debug("Generated keywords (brain region excluded): {}", keywords);
         return keywords;
     }
 
