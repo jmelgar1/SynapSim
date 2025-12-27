@@ -424,7 +424,7 @@ public class SimulationService {
 
     /**
      * Annotate connection changes with relevant research findings
-     * Scans research abstracts for mentions of brain regions and connectivity patterns
+     * Scans research abstracts for mentions of brain regions
      */
     private void annotateConnectionChangesWithResearch(
             List<SimulationResponse.ConnectionChangeDTO> connectionChanges,
@@ -454,21 +454,30 @@ public class SimulationService {
                 List<String> sourceNames = regionAliases.getOrDefault(sourceCode, List.of(sourceCode.toLowerCase()));
                 List<String> targetNames = regionAliases.getOrDefault(targetCode, List.of(targetCode.toLowerCase()));
 
-                // Check if both regions are mentioned together
-                boolean mentionsBothRegions = false;
+                // Check if either region is mentioned (more lenient than requiring both)
+                boolean mentionsSourceRegion = false;
+                boolean mentionsTargetRegion = false;
+
                 for (String sourceName : sourceNames) {
-                    for (String targetName : targetNames) {
-                        if (combinedText.contains(sourceName) && combinedText.contains(targetName)) {
-                            mentionsBothRegions = true;
-                            break;
-                        }
+                    if (combinedText.contains(sourceName)) {
+                        mentionsSourceRegion = true;
+                        break;
                     }
-                    if (mentionsBothRegions) break;
                 }
 
-                if (mentionsBothRegions) {
-                    // Look for connectivity-related keywords near the region mentions
-                    String note = extractConnectivityNote(combinedText, sourceNames, targetNames, change.getChangeType());
+                for (String targetName : targetNames) {
+                    if (combinedText.contains(targetName)) {
+                        mentionsTargetRegion = true;
+                        break;
+                    }
+                }
+
+                // Generate note if at least one region is mentioned
+                if (mentionsSourceRegion || mentionsTargetRegion) {
+                    String note = generateRegionBasedNote(
+                            mentionsSourceRegion, mentionsTargetRegion,
+                            sourceCode, targetCode, combinedText, change.getChangeType()
+                    );
                     if (note != null) {
                         change.setResearchNote(note);
                     }
@@ -501,19 +510,17 @@ public class SimulationService {
     }
 
     /**
-     * Extract a connectivity note from research text if relevant patterns are found
+     * Generate a research note based on which brain regions are mentioned
      */
-    private String extractConnectivityNote(String text, List<String> sourceNames, List<String> targetNames,
-                                           String changeType) {
+    private String generateRegionBasedNote(
+            boolean mentionsSource, boolean mentionsTarget,
+            String sourceCode, String targetCode,
+            String text, String changeType
+    ) {
         // Connectivity-related keywords to look for
-        String[] increasedKeywords = {"increased", "enhanced", "strengthened", "elevated", "greater",
-                                     "augmented", "facilitated", "improved"};
-        String[] decreasedKeywords = {"decreased", "reduced", "diminished", "weakened", "lower",
-                                     "attenuated", "suppressed", "impaired"};
         String[] connectivityKeywords = {"connectivity", "connection", "coupling", "communication",
                                         "network", "integration", "correlation", "functional connectivity"};
 
-        // Check for connectivity mentions with direction
         boolean mentionsConnectivity = false;
         for (String keyword : connectivityKeywords) {
             if (text.contains(keyword)) {
@@ -522,40 +529,34 @@ public class SimulationService {
             }
         }
 
-        if (!mentionsConnectivity) {
-            return null;
-        }
-
-        // Look for directional language matching the change type
-        boolean matchesDirection = false;
-        String direction = "";
-
-        if (changeType.equals("INCREASED")) {
-            for (String keyword : increasedKeywords) {
-                if (text.contains(keyword)) {
-                    matchesDirection = true;
-                    direction = keyword;
-                    break;
-                }
-            }
-        } else if (changeType.equals("DECREASED")) {
-            for (String keyword : decreasedKeywords) {
-                if (text.contains(keyword)) {
-                    matchesDirection = true;
-                    direction = keyword;
-                    break;
-                }
+        // Case 1: Both regions mentioned
+        if (mentionsSource && mentionsTarget) {
+            if (mentionsConnectivity) {
+                return String.format("Research discusses %s-%s connectivity", sourceCode, targetCode);
+            } else {
+                return String.format("Research mentions both %s and %s regions", sourceCode, targetCode);
             }
         }
 
-        // Generate note based on what we found
-        if (matchesDirection) {
-            return String.format("Research reports %s connectivity between these regions", direction);
-        } else if (mentionsConnectivity) {
-            return "Research discusses connectivity changes between these regions";
-        }
+        // Case 2: Only one region mentioned
+        String mentionedRegion = mentionsSource ? sourceCode : targetCode;
 
-        return null;
+        // Look for common neuroscience terms
+        boolean mentionsActivity = text.contains("activity") || text.contains("activation");
+        boolean mentionsPlasticity = text.contains("plasticity") || text.contains("neuroplasticity");
+        boolean mentionsFunctional = text.contains("functional") || text.contains("function");
+
+        if (mentionsConnectivity) {
+            return String.format("Research discusses %s connectivity patterns", mentionedRegion);
+        } else if (mentionsPlasticity) {
+            return String.format("Research reports neuroplasticity in %s", mentionedRegion);
+        } else if (mentionsActivity) {
+            return String.format("Research examines %s activity", mentionedRegion);
+        } else if (mentionsFunctional) {
+            return String.format("Research explores %s function", mentionedRegion);
+        } else {
+            return String.format("Research discusses %s region", mentionedRegion);
+        }
     }
 
     /**

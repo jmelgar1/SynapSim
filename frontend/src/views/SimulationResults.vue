@@ -11,6 +11,7 @@ const simulationId = ref(route.params.id)
 const simulation = ref(null)
 const loading = ref(true)
 const error = ref(null)
+const expandedAbstracts = ref(new Set())
 
 onMounted(async () => {
   await loadSimulation()
@@ -39,6 +40,30 @@ const goToDashboard = () => {
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString()
+}
+
+const toggleAbstract = (index) => {
+  if (expandedAbstracts.value.has(index)) {
+    expandedAbstracts.value.delete(index)
+  } else {
+    expandedAbstracts.value.add(index)
+  }
+  // Force reactivity update
+  expandedAbstracts.value = new Set(expandedAbstracts.value)
+}
+
+const isExpanded = (index) => {
+  return expandedAbstracts.value.has(index)
+}
+
+const getAbstractPreview = (abstractText, index) => {
+  if (!abstractText) return ''
+  if (isExpanded(index)) return abstractText
+  return abstractText.length > 200 ? abstractText.substring(0, 200) + '...' : abstractText
+}
+
+const shouldShowExpander = (abstractText) => {
+  return abstractText && abstractText.length > 200
 }
 </script>
 
@@ -162,7 +187,18 @@ const formatDate = (dateString) => {
                 <span class="relevance-badge">{{ (ref.relevanceScore * 100).toFixed(0) }}% relevant</span>
               </div>
               <p class="reference-authors">{{ ref.authors }}</p>
-              <p class="reference-abstract">{{ ref.abstractText?.substring(0, 200) }}...</p>
+              <div class="abstract-container">
+                <p class="reference-abstract" :class="{ expanded: isExpanded(index) }">
+                  {{ getAbstractPreview(ref.abstractText, index) }}
+                </p>
+                <button
+                  v-if="shouldShowExpander(ref.abstractText)"
+                  @click="toggleAbstract(index)"
+                  class="expand-button"
+                >
+                  {{ isExpanded(index) ? 'Show less' : 'Show more' }}
+                </button>
+              </div>
             </div>
           </div>
           <p v-else class="no-data">No research references found</p>
@@ -539,11 +575,44 @@ const formatDate = (dateString) => {
   font-style: italic;
 }
 
+.abstract-container {
+  position: relative;
+}
+
 .reference-abstract {
   color: var(--color-text);
   font-size: 0.9rem;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
+  transition: max-height 0.3s ease;
+}
+
+.reference-abstract.expanded {
+  white-space: pre-line;
+}
+
+.expand-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin-top: 0.25rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.expand-button:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.expand-button:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .no-data {
