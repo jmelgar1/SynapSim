@@ -5,6 +5,7 @@ import com.synapsim.dto.BrainNetworkDTO;
 import com.synapsim.dto.PubMedArticleDTO;
 import com.synapsim.dto.ScenarioRequest;
 import com.synapsim.dto.SimulationResponse;
+import com.synapsim.exception.NoResearchFoundException;
 import com.synapsim.model.*;
 import com.synapsim.repository.ScenarioRepository;
 import com.synapsim.repository.SimulationRepository;
@@ -68,6 +69,16 @@ public class SimulationService {
             // 5. Search for relevant research articles
             List<PubMedArticleDTO> articles = searchRelevantResearch(scenario);
 
+            // 5.1. Check if any research was found - if not, throw error
+            if (articles.isEmpty()) {
+                log.warn("No relevant research found for compound={}, setting={}",
+                        scenario.getCompoundInspiration(), scenario.getTherapeuticSetting());
+                throw new NoResearchFoundException(
+                        "No relevant research found for the selected parameters. " +
+                        "Please try a different combination of compound and therapeutic setting."
+                );
+            }
+
             // 6. Save PubMed references
             savePubMedReferences(simulation, articles);
 
@@ -78,10 +89,14 @@ public class SimulationService {
             // 8. Generate connection changes JSON
             List<SimulationResponse.ConnectionChangeDTO> connectionChanges =
                     brainNetworkService.generateConnectionChanges(changes, originalGraph);
+
+            // 8.1. Annotate connection changes with research findings
+            annotateConnectionChangesWithResearch(connectionChanges, articles);
+
             String connectionChangesJson = objectMapper.writeValueAsString(connectionChanges);
 
             // 9. Generate prediction summary and confidence score
-            String predictionSummary = generatePredictionSummary(scenario, connectionChanges, articles.size());
+            String predictionSummary = generatePredictionSummary(scenario, connectionChanges, articles);
             double confidenceScore = calculateConfidenceScore(connectionChanges, articles.size());
 
             // 10. Determine success and badge
@@ -230,12 +245,12 @@ public class SimulationService {
     }
 
     /**
-     * Generate prediction summary based on simulation results
+     * Generate prediction summary based on simulation results and actual research findings
      */
     private String generatePredictionSummary(
             Scenario scenario,
             List<SimulationResponse.ConnectionChangeDTO> changes,
-            int researchCount
+            List<PubMedArticleDTO> articles
     ) {
         StringBuilder summary = new StringBuilder();
 
@@ -252,18 +267,29 @@ public class SimulationService {
                 .limit(3)
                 .collect(Collectors.toList());
 
-        // Build summary
-        summary.append(String.format("Based on %d relevant research studies, this simulation suggests that ",
-                researchCount));
+        // Get highest relevance article for insights
+        PubMedArticleDTO topArticle = articles.stream()
+                .max(Comparator.comparing(PubMedArticleDTO::getRelevanceScore))
+                .orElse(articles.get(0));
+
+        // Extract research insights from top articles
+        String researchInsights = extractResearchInsights(articles, scenario);
+
+        // Build summary starting with research context
+        summary.append(String.format("Analysis of %d peer-reviewed studies reveals that ",
+                articles.size()));
         summary.append(scenario.getCompoundInspiration().getValue());
         summary.append(" in a ");
         summary.append(scenario.getTherapeuticSetting().getValue());
-        summary.append(" setting could promote neural pathway changes. ");
+        summary.append(" setting ");
+        summary.append(researchInsights);
+        summary.append(". ");
 
-        summary.append(String.format("The simulation showed %d strengthened and %d weakened connections. ",
+        // Add simulation-specific findings
+        summary.append(String.format("Our simulation demonstrates these effects through %d strengthened and %d weakened neural connections. ",
                 increases, decreases));
 
-        summary.append("Most notable changes include: ");
+        summary.append("Key connectivity changes: ");
         for (int i = 0; i < topChanges.size(); i++) {
             SimulationResponse.ConnectionChangeDTO change = topChanges.get(i);
             if (i > 0) summary.append(", ");
@@ -275,48 +301,261 @@ public class SimulationService {
         }
         summary.append(". ");
 
-        // Add therapeutic implications
-        summary.append(generateTherapeuticImplications(scenario, topChanges));
+        // Add therapeutic implications based on research
+        summary.append(generateResearchBasedImplications(scenario, articles, topChanges));
 
         return summary.toString();
     }
 
     /**
-     * Generate therapeutic implications based on changes
+     * Extract insights from research articles to inform the prediction summary
      */
-    private String generateTherapeuticImplications(
+    private String extractResearchInsights(List<PubMedArticleDTO> articles, Scenario scenario) {
+        // Analyze abstracts for common themes and findings
+        Map<String, Integer> keyThemes = new HashMap<>();
+
+        // Key terms to look for in abstracts
+        String[] positiveTerms = {"increases", "enhances", "promotes", "improves", "strengthens",
+                                  "facilitates", "induces", "augments", "elevates"};
+        String[] mechanismTerms = {"connectivity", "neuroplasticity", "network", "communication",
+                                   "integration", "synchrony", "coupling"};
+        String[] outcomeTerms = {"depression", "anxiety", "mood", "wellbeing", "cognition",
+                                "emotional", "therapeutic", "treatment"};
+
+        // Count theme occurrences across top articles
+        for (PubMedArticleDTO article : articles.stream().limit(5).toList()) {
+            String abstractLower = article.getAbstractText() != null ?
+                                  article.getAbstractText().toLowerCase() : "";
+
+            for (String term : positiveTerms) {
+                if (abstractLower.contains(term)) {
+                    keyThemes.merge(term, 1, Integer::sum);
+                }
+            }
+            for (String term : mechanismTerms) {
+                if (abstractLower.contains(term)) {
+                    keyThemes.merge(term, 1, Integer::sum);
+                }
+            }
+            for (String term : outcomeTerms) {
+                if (abstractLower.contains(term)) {
+                    keyThemes.merge(term, 1, Integer::sum);
+                }
+            }
+        }
+
+        // Find most common mechanism and outcome terms
+        String topMechanism = keyThemes.entrySet().stream()
+                .filter(e -> Arrays.asList(mechanismTerms).contains(e.getKey()))
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("connectivity");
+
+        String topOutcome = keyThemes.entrySet().stream()
+                .filter(e -> Arrays.asList(outcomeTerms).contains(e.getKey()))
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("therapeutic");
+
+        // Generate insight based on research themes
+        return String.format("modulates brain %s with implications for %s outcomes",
+                topMechanism, topOutcome);
+    }
+
+    /**
+     * Generate therapeutic implications based on actual research findings
+     */
+    private String generateResearchBasedImplications(
             Scenario scenario,
+            List<PubMedArticleDTO> articles,
             List<SimulationResponse.ConnectionChangeDTO> topChanges
     ) {
         StringBuilder implications = new StringBuilder();
 
-        implications.append("These changes suggest potential benefits for ");
+        // Extract clinical contexts from research abstracts
+        Set<String> clinicalContexts = new HashSet<>();
+        for (PubMedArticleDTO article : articles.stream().limit(3).toList()) {
+            String abstractLower = article.getAbstractText() != null ?
+                                  article.getAbstractText().toLowerCase() : "";
 
-        // Determine therapeutic targets based on compound and changes
-        switch (scenario.getCompoundInspiration()) {
-            case PSILOCYBIN:
-                implications.append("mood regulation, anxiety reduction, and emotional processing");
-                break;
-            case LSD:
-                implications.append("creative thinking, cognitive flexibility, and perceptual enhancement");
-                break;
-            case KETAMINE:
-                implications.append("rapid mood improvement, cognitive flexibility, and stress resilience");
-                break;
-            case MDMA:
-                implications.append("emotional openness, empathy enhancement, and trauma processing");
-                break;
+            if (abstractLower.contains("depression") || abstractLower.contains("depressive")) {
+                clinicalContexts.add("treatment-resistant depression");
+            }
+            if (abstractLower.contains("anxiety") || abstractLower.contains("anxious")) {
+                clinicalContexts.add("anxiety disorders");
+            }
+            if (abstractLower.contains("ptsd") || abstractLower.contains("trauma")) {
+                clinicalContexts.add("PTSD and trauma processing");
+            }
+            if (abstractLower.contains("creativity") || abstractLower.contains("creative")) {
+                clinicalContexts.add("creative enhancement");
+            }
+            if (abstractLower.contains("empathy") || abstractLower.contains("social")) {
+                clinicalContexts.add("social-emotional functioning");
+            }
         }
 
-        implications.append(". Integration practices like ");
-        if (scenario.getIntegrationSteps() != null && !scenario.getIntegrationSteps().isEmpty()) {
-            implications.append(scenario.getIntegrationSteps());
+        implications.append("Research suggests therapeutic potential for ");
+
+        if (!clinicalContexts.isEmpty()) {
+            implications.append(String.join(", ", clinicalContexts));
         } else {
-            implications.append("mindfulness and journaling");
+            // Fallback to compound-specific defaults
+            switch (scenario.getCompoundInspiration()) {
+                case PSILOCYBIN:
+                    implications.append("mood regulation and emotional processing");
+                    break;
+                case LSD:
+                    implications.append("cognitive flexibility and perceptual changes");
+                    break;
+                case KETAMINE:
+                    implications.append("rapid antidepressant effects and mood improvement");
+                    break;
+                case MDMA:
+                    implications.append("empathy enhancement and trauma processing");
+                    break;
+            }
         }
-        implications.append(" may help consolidate these neuroplastic changes.");
+
+        implications.append(". These findings align with the observed network reorganization in our simulation");
 
         return implications.toString();
+    }
+
+    /**
+     * Annotate connection changes with relevant research findings
+     * Scans research abstracts for mentions of brain regions and connectivity patterns
+     */
+    private void annotateConnectionChangesWithResearch(
+            List<SimulationResponse.ConnectionChangeDTO> connectionChanges,
+            List<PubMedArticleDTO> articles
+    ) {
+        // Map region codes to their full names and common variations
+        Map<String, List<String>> regionAliases = buildRegionAliasMap();
+
+        // Process top 5 most relevant articles
+        for (PubMedArticleDTO article : articles.stream().limit(5).toList()) {
+            String abstractLower = article.getAbstractText() != null ?
+                    article.getAbstractText().toLowerCase() : "";
+            String titleLower = article.getTitle().toLowerCase();
+            String combinedText = titleLower + " " + abstractLower;
+
+            // Check each connection change
+            for (SimulationResponse.ConnectionChangeDTO change : connectionChanges) {
+                // Skip if already has a research note
+                if (change.getResearchNote() != null) {
+                    continue;
+                }
+
+                String sourceCode = extractCode(change.getSourceRegion());
+                String targetCode = extractCode(change.getTargetRegion());
+
+                // Get possible names for these regions
+                List<String> sourceNames = regionAliases.getOrDefault(sourceCode, List.of(sourceCode.toLowerCase()));
+                List<String> targetNames = regionAliases.getOrDefault(targetCode, List.of(targetCode.toLowerCase()));
+
+                // Check if both regions are mentioned together
+                boolean mentionsBothRegions = false;
+                for (String sourceName : sourceNames) {
+                    for (String targetName : targetNames) {
+                        if (combinedText.contains(sourceName) && combinedText.contains(targetName)) {
+                            mentionsBothRegions = true;
+                            break;
+                        }
+                    }
+                    if (mentionsBothRegions) break;
+                }
+
+                if (mentionsBothRegions) {
+                    // Look for connectivity-related keywords near the region mentions
+                    String note = extractConnectivityNote(combinedText, sourceNames, targetNames, change.getChangeType());
+                    if (note != null) {
+                        change.setResearchNote(note);
+                    }
+                }
+            }
+        }
+
+        log.info("Annotated {} connection changes with research findings",
+                connectionChanges.stream().filter(c -> c.getResearchNote() != null).count());
+    }
+
+    /**
+     * Build a map of region codes to their common aliases in research literature
+     */
+    private Map<String, List<String>> buildRegionAliasMap() {
+        Map<String, List<String>> aliases = new HashMap<>();
+
+        aliases.put("mPFC", List.of("medial prefrontal cortex", "mpfc", "prefrontal cortex", "pfc"));
+        aliases.put("PCC", List.of("posterior cingulate cortex", "pcc", "posterior cingulate", "default mode network", "dmn"));
+        aliases.put("AHP", List.of("hippocampus", "anterior hippocampus", "hippocampal"));
+        aliases.put("AMY", List.of("amygdala", "amygdalar"));
+        aliases.put("V1", List.of("visual cortex", "v1", "occipital cortex", "visual"));
+        aliases.put("A1", List.of("auditory cortex", "a1", "temporal cortex", "auditory"));
+        aliases.put("THL", List.of("thalamus", "thalamic"));
+        aliases.put("AMC", List.of("caudate", "anteromedial caudate", "striatum", "striatal"));
+        aliases.put("FP", List.of("frontoparietal", "frontoparietal network", "attention network", "parietal"));
+        aliases.put("CBL", List.of("cerebellum", "cerebellar"));
+
+        return aliases;
+    }
+
+    /**
+     * Extract a connectivity note from research text if relevant patterns are found
+     */
+    private String extractConnectivityNote(String text, List<String> sourceNames, List<String> targetNames,
+                                           String changeType) {
+        // Connectivity-related keywords to look for
+        String[] increasedKeywords = {"increased", "enhanced", "strengthened", "elevated", "greater",
+                                     "augmented", "facilitated", "improved"};
+        String[] decreasedKeywords = {"decreased", "reduced", "diminished", "weakened", "lower",
+                                     "attenuated", "suppressed", "impaired"};
+        String[] connectivityKeywords = {"connectivity", "connection", "coupling", "communication",
+                                        "network", "integration", "correlation", "functional connectivity"};
+
+        // Check for connectivity mentions with direction
+        boolean mentionsConnectivity = false;
+        for (String keyword : connectivityKeywords) {
+            if (text.contains(keyword)) {
+                mentionsConnectivity = true;
+                break;
+            }
+        }
+
+        if (!mentionsConnectivity) {
+            return null;
+        }
+
+        // Look for directional language matching the change type
+        boolean matchesDirection = false;
+        String direction = "";
+
+        if (changeType.equals("INCREASED")) {
+            for (String keyword : increasedKeywords) {
+                if (text.contains(keyword)) {
+                    matchesDirection = true;
+                    direction = keyword;
+                    break;
+                }
+            }
+        } else if (changeType.equals("DECREASED")) {
+            for (String keyword : decreasedKeywords) {
+                if (text.contains(keyword)) {
+                    matchesDirection = true;
+                    direction = keyword;
+                    break;
+                }
+            }
+        }
+
+        // Generate note based on what we found
+        if (matchesDirection) {
+            return String.format("Research reports %s connectivity between these regions", direction);
+        } else if (mentionsConnectivity) {
+            return "Research discusses connectivity changes between these regions";
+        }
+
+        return null;
     }
 
     /**

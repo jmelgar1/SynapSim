@@ -399,6 +399,7 @@ public class BrainNetworkService {
                         .afterWeight(afterWeight)
                         .changePercentage(changePercentage)
                         .changeType(changeType)
+                        .researchNote(null) // Will be populated later if research supports this connection
                         .build());
             }
         }

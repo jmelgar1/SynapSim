@@ -29,6 +29,7 @@ const scenario = ref({
 // Loading state
 const isSubmitting = ref(false)
 const errorMessage = ref(null)
+const showNoResearchModal = ref(false)
 
 // Validation
 const isFormValid = computed(() => {
@@ -89,10 +90,20 @@ const handleSubmit = async () => {
     router.push(`/simulation/${response.id}`)
   } catch (error) {
     console.error('Error creating simulation:', error)
-    errorMessage.value = error.response?.data?.message || error.message || 'Failed to create simulation. Please ensure the backend is running.'
+
+    // Check if it's a "no research found" error
+    if (error.response?.data?.error === 'NO_RESEARCH_FOUND') {
+      showNoResearchModal.value = true
+    } else {
+      errorMessage.value = error.response?.data?.message || error.message || 'Failed to create simulation. Please ensure the backend is running.'
+    }
   } finally {
     isSubmitting.value = false
   }
+}
+
+const closeNoResearchModal = () => {
+  showNoResearchModal.value = false
 }
 
 const goBack = () => {
@@ -234,6 +245,30 @@ const goBack = () => {
           >
             <span v-if="isSubmitting">⏳ Processing...</span>
             <span v-else>🧠 Forge Pathway</span>
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Research Found Modal -->
+    <div v-if="showNoResearchModal" class="modal-overlay" @click="closeNoResearchModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>No Relevant Research Found</h2>
+          <button class="modal-close" @click="closeNoResearchModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-icon">🔬</div>
+          <p class="modal-message">
+            We couldn't find any relevant research articles for your selected combination of parameters.
+          </p>
+          <p class="modal-suggestion">
+            Please try adjusting your compound inspiration or therapeutic setting to explore different pathways.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <PrimaryButton @click="closeNoResearchModal">
+            Try Different Parameters
           </PrimaryButton>
         </div>
       </div>
@@ -576,6 +611,107 @@ const goBack = () => {
 .forge-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--color-background);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: 2rem;
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.modal-message {
+  font-size: 1.1rem;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.modal-suggestion {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {

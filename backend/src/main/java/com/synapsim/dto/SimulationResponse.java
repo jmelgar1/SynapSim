@@ -49,5 +49,6 @@ public class SimulationResponse {
         private Double afterWeight;
         private Double changePercentage;
         private String changeType; // INCREASED, DECREASED, STABLE
+        private String researchNote; // Optional note when research mentions this connection
     }
 }
