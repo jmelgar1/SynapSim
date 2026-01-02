@@ -26,8 +26,8 @@ public class SimulationResponse {
     // Network visualization data
     private BrainNetworkDTO networkState;
 
-    // Changes in connections
-    private List<ConnectionChangeDTO> connectionChanges;
+    // Brain regions mentioned in research
+    private List<MentionedRegionDTO> mentionedRegions;
 
     // Analysis results
     private String predictionSummary;
@@ -37,18 +37,4 @@ public class SimulationResponse {
 
     // Research references
     private List<PubMedArticleDTO> pubmedReferences;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class ConnectionChangeDTO {
-        private String sourceRegion;
-        private String targetRegion;
-        private Double beforeWeight;
-        private Double afterWeight;
-        private Double changePercentage;
-        private String changeType; // INCREASED, DECREASED, STABLE
-        private String researchNote; // Optional note when research mentions this connection
-    }
 }

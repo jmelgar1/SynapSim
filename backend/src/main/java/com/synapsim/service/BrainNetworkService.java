@@ -303,6 +303,187 @@ public class BrainNetworkService {
     }
 
     /**
+     * Build comprehensive region alias map for matching brain regions in research articles
+     * Maps region codes to common variations and alternate names found in literature
+     */
+    public Map<String, List<String>> buildRegionAliasMap() {
+        Map<String, List<String>> aliases = new HashMap<>();
+
+        // Original 10 core regions
+        aliases.put("mPFC", List.of("medial prefrontal cortex", "mpfc", "prefrontal", "pfc", "medial prefrontal"));
+        aliases.put("PCC", List.of("posterior cingulate cortex", "pcc", "posterior cingulate"));
+        aliases.put("AHP", List.of("anterior hippocampus", "hippocampus", "hippocampal"));
+        aliases.put("AMY", List.of("amygdala", "amygdalae"));
+        aliases.put("V1", List.of("visual cortex", "primary visual", "v1", "striate cortex", "occipital"));
+        aliases.put("A1", List.of("auditory cortex", "primary auditory", "a1", "temporal"));
+        aliases.put("THL", List.of("thalamus", "thalamic"));
+        aliases.put("AMC", List.of("anteromedial caudate", "caudate", "striatum"));
+        aliases.put("FP", List.of("frontoparietal", "frontoparietal regions", "fronto-parietal"));
+        aliases.put("CBL", List.of("cerebellum", "cerebellar"));
+
+        // Brainstem regions
+        aliases.put("MED", List.of("medulla oblongata", "medulla", "brainstem"));
+        aliases.put("LC", List.of("locus coeruleus", "locus ceruleus", "noradrenergic", "norepinephrine", "lc"));
+        aliases.put("DRN", List.of("dorsal raphe nucleus", "dorsal raphe", "raphe nucleus", "raphe nuclei", "serotonergic", "5-ht", "drn"));
+        aliases.put("PON", List.of("pons", "pontine"));
+        aliases.put("CV", List.of("cerebellar vermis", "vermis"));
+        aliases.put("DN", List.of("dentate nucleus", "cerebellar dentate"));
+
+        // Midbrain regions
+        aliases.put("PAG", List.of("periaqueductal gray", "periaqueductal grey", "pag", "central gray"));
+        aliases.put("VTA", List.of("ventral tegmental area", "ventral tegmental", "vta", "dopamine", "dopaminergic"));
+        aliases.put("SN", List.of("substantia nigra", "nigra", "sn"));
+        aliases.put("SC", List.of("superior colliculus", "superior colliculi", "colliculus"));
+        aliases.put("IC", List.of("inferior colliculus", "inferior colliculi"));
+
+        // Diencephalon - Epithalamus
+        aliases.put("PIN", List.of("pineal gland", "pineal", "epiphysis"));
+        aliases.put("HB", List.of("habenular nuclei", "habenula", "habenular"));
+
+        // Thalamus expanded
+        aliases.put("MD", List.of("medial dorsal nucleus", "mediodorsal", "md thalamus", "medial dorsal thalamus"));
+        aliases.put("PUL", List.of("pulvinar", "pulvinar nucleus"));
+        aliases.put("LGN", List.of("lateral geniculate nucleus", "lateral geniculate", "lgn"));
+        aliases.put("MGN", List.of("medial geniculate nucleus", "medial geniculate", "mgn"));
+        aliases.put("AN", List.of("anterior thalamic nuclei", "anterior thalamus"));
+        aliases.put("ILN", List.of("intralaminar nuclei", "intralaminar thalamus"));
+
+        // Hypothalamus expanded
+        aliases.put("SCN", List.of("suprachiasmatic nucleus", "suprachiasmatic", "scn", "circadian"));
+        aliases.put("PVN", List.of("paraventricular nucleus", "paraventricular", "pvn", "hpa axis"));
+        aliases.put("VMH", List.of("ventromedial hypothalamus", "ventromedial", "vmh"));
+        aliases.put("LH", List.of("lateral hypothalamus", "lateral", "lh"));
+        aliases.put("MB", List.of("mammillary bodies", "mammillary", "mammillary body"));
+
+        // Basal Ganglia
+        aliases.put("PUT", List.of("putamen"));
+        aliases.put("CD", List.of("caudate nucleus", "caudate"));
+        aliases.put("NAcc", List.of("nucleus accumbens", "accumbens", "ventral striatum", "nacc", "reward", "nac"));
+        aliases.put("GP", List.of("globus pallidus", "pallidum"));
+        aliases.put("STN", List.of("subthalamic nucleus", "subthalamic", "stn"));
+
+        // Basal Forebrain
+        aliases.put("NBM", List.of("nucleus basalis", "nucleus basalis of meynert", "nbm", "basal nucleus", "acetylcholine"));
+        aliases.put("SN_BF", List.of("septal nuclei", "septum", "septal"));
+
+        // Hippocampal Formation
+        aliases.put("DG", List.of("dentate gyrus", "dentate"));
+        aliases.put("CA1", List.of("ca1", "cornu ammonis 1", "hippocampus ca1", "hippocampal ca1"));
+        aliases.put("CA3", List.of("ca3", "cornu ammonis 3", "hippocampus ca3", "hippocampal ca3"));
+        aliases.put("EC", List.of("entorhinal cortex", "entorhinal", "ec"));
+        aliases.put("PHC", List.of("parahippocampal cortex", "parahippocampal", "phc"));
+
+        // Amygdala Complex
+        aliases.put("BLA", List.of("basolateral amygdala", "basolateral", "bla"));
+        aliases.put("CEA", List.of("central amygdala", "central nucleus amygdala", "cea"));
+        aliases.put("BNST", List.of("bed nucleus of stria terminalis", "bed nucleus", "bnst", "extended amygdala"));
+
+        // Insula
+        aliases.put("AI", List.of("anterior insula", "insular cortex anterior", "insula", "ai"));
+        aliases.put("PI", List.of("posterior insula", "insular cortex posterior", "pi"));
+
+        // Cingulate Cortex
+        aliases.put("ACC", List.of("anterior cingulate cortex", "anterior cingulate", "acc"));
+        aliases.put("sgACC", List.of("subgenual anterior cingulate", "subgenual", "subgenual acc", "area 25", "ba25", "brodmann area 25", "sgacc"));
+        aliases.put("RSC", List.of("retrosplenial cortex", "retrosplenial", "rsc"));
+        aliases.put("PCUN", List.of("precuneus", "medial parietal", "precuneal"));
+
+        // Prefrontal Cortex expanded
+        aliases.put("dlPFC", List.of("dorsolateral prefrontal cortex", "dorsolateral prefrontal", "dlpfc", "lateral prefrontal"));
+        aliases.put("vmPFC", List.of("ventromedial prefrontal cortex", "ventromedial prefrontal", "vmpfc", "medial prefrontal ventral"));
+        aliases.put("OFC", List.of("orbitofrontal cortex", "orbitofrontal", "orbital frontal", "ofc"));
+        aliases.put("vlPFC", List.of("ventrolateral prefrontal cortex", "ventrolateral prefrontal", "vlpfc"));
+        aliases.put("dmPFC", List.of("dorsomedial prefrontal cortex", "dorsomedial prefrontal", "dmpfc"));
+
+        // Motor and Somatosensory
+        aliases.put("M1", List.of("primary motor cortex", "motor cortex", "m1", "precentral gyrus"));
+        aliases.put("PMC", List.of("premotor cortex", "premotor", "pmc"));
+        aliases.put("SMA", List.of("supplementary motor area", "sma", "supplementary motor"));
+        aliases.put("S1", List.of("primary somatosensory cortex", "somatosensory cortex", "s1", "postcentral gyrus"));
+        aliases.put("S2", List.of("secondary somatosensory cortex", "s2"));
+
+        // Parietal Cortex
+        aliases.put("PPC", List.of("posterior parietal cortex", "posterior parietal", "ppc"));
+        aliases.put("IPL", List.of("inferior parietal lobule", "inferior parietal", "ipl"));
+        aliases.put("SPL", List.of("superior parietal lobule", "superior parietal", "spl"));
+
+        // Temporal Cortex
+        aliases.put("STG", List.of("superior temporal gyrus", "superior temporal", "stg"));
+        aliases.put("MTG", List.of("middle temporal gyrus", "middle temporal", "mtg"));
+        aliases.put("ITG", List.of("inferior temporal gyrus", "inferior temporal", "itg"));
+        aliases.put("FG", List.of("fusiform gyrus", "fusiform", "fg", "face area"));
+        aliases.put("TP", List.of("temporal pole", "anterior temporal"));
+
+        // Occipital/Visual Cortex expanded
+        aliases.put("V2", List.of("visual area 2", "v2", "secondary visual"));
+        aliases.put("V3", List.of("visual area 3", "v3"));
+        aliases.put("V4", List.of("visual area 4", "v4", "color area"));
+        aliases.put("V5", List.of("visual area 5", "v5", "mt", "motion area"));
+        aliases.put("CUN", List.of("cuneus", "cuneal"));
+
+        // Other regions
+        aliases.put("CLA", List.of("claustrum", "claustral", "consciousness"));
+        aliases.put("PIR", List.of("piriform cortex", "piriform", "primary olfactory", "olfactory"));
+
+        return aliases;
+    }
+
+    /**
+     * Build filtered brain graph containing only regions mentioned in research abstracts
+     * This creates a focused network based on what the research actually discusses
+     *
+     * @param mentionedRegionCodes Set of region codes (e.g., "DRN", "mPFC") found in abstracts
+     * @return Graph containing only the mentioned regions and their connections
+     */
+    public Graph<String, DefaultWeightedEdge> buildFilteredBrainGraph(Set<String> mentionedRegionCodes) {
+        log.info("Building filtered brain graph with {} mentioned regions", mentionedRegionCodes.size());
+
+        Graph<String, DefaultWeightedEdge> graph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+
+        // Load all brain regions
+        List<BrainRegion> allRegions = brainRegionRepository.findAll();
+        Map<String, BrainRegion> codeToRegion = allRegions.stream()
+                .collect(Collectors.toMap(BrainRegion::getCode, r -> r));
+
+        // Add only mentioned regions as vertices
+        for (String code : mentionedRegionCodes) {
+            BrainRegion region = codeToRegion.get(code);
+            if (region != null) {
+                graph.addVertex(region.getName());
+            } else {
+                log.warn("Region code {} mentioned in research but not found in database", code);
+            }
+        }
+
+        log.debug("Added {} vertices to filtered graph", graph.vertexSet().size());
+
+        // Add connections between mentioned regions only
+        List<NeuralConnection> connections = neuralConnectionRepository.findAll();
+        for (NeuralConnection connection : connections) {
+            String sourceCode = connection.getSourceRegion().getCode();
+            String targetCode = connection.getTargetRegion().getCode();
+
+            // Only add edge if both regions are mentioned in research
+            if (mentionedRegionCodes.contains(sourceCode) && mentionedRegionCodes.contains(targetCode)) {
+                String source = connection.getSourceRegion().getName();
+                String target = connection.getTargetRegion().getName();
+
+                if (graph.containsVertex(source) && graph.containsVertex(target)) {
+                    DefaultWeightedEdge edge = graph.addEdge(source, target);
+                    if (edge != null) {
+                        graph.setEdgeWeight(edge, connection.getWeight());
+                    }
+                }
+            }
+        }
+
+        log.info("Built filtered brain graph with {} vertices and {} edges",
+                graph.vertexSet().size(), graph.edgeSet().size());
+
+        return graph;
+    }
+
+    /**
      * Convert graph to DTO for frontend visualization
      */
     public BrainNetworkDTO convertGraphToDTO(Graph<String, DefaultWeightedEdge> graph) {
@@ -368,48 +549,5 @@ public class BrainNetworkService {
                 .build();
     }
 
-    /**
-     * Generate connection changes DTO for visualization
-     */
-    public List<SimulationResponse.ConnectionChangeDTO> generateConnectionChanges(
-            Map<String, Map<String, Double>> changes,
-            Graph<String, DefaultWeightedEdge> originalGraph
-    ) {
-        List<SimulationResponse.ConnectionChangeDTO> changesList = new ArrayList<>();
-
-        for (Map.Entry<String, Map<String, Double>> entry : changes.entrySet()) {
-            String source = entry.getKey();
-
-            for (Map.Entry<String, Double> targetChange : entry.getValue().entrySet()) {
-                String target = targetChange.getKey();
-                double change = targetChange.getValue();
-
-                // Get original weight
-                DefaultWeightedEdge edge = originalGraph.getEdge(source, target);
-                double beforeWeight = edge != null ? originalGraph.getEdgeWeight(edge) : 0.5;
-                double afterWeight = beforeWeight + change;
-                double changePercentage = (change / beforeWeight) * 100.0;
-
-                String changeType = change > 0 ? "INCREASED" : (change < 0 ? "DECREASED" : "STABLE");
-
-                changesList.add(SimulationResponse.ConnectionChangeDTO.builder()
-                        .sourceRegion(source)
-                        .targetRegion(target)
-                        .beforeWeight(beforeWeight)
-                        .afterWeight(afterWeight)
-                        .changePercentage(changePercentage)
-                        .changeType(changeType)
-                        .researchNote(null) // Will be populated later if research supports this connection
-                        .build());
-            }
-        }
-
-        // Sort by magnitude of change
-        changesList.sort((a, b) -> Double.compare(
-                Math.abs(b.getChangePercentage()),
-                Math.abs(a.getChangePercentage())
-        ));
-
-        return changesList;
-    }
+    // Method removed - no longer using connection changes, using mentioned regions instead
 }

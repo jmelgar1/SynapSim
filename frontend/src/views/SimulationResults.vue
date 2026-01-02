@@ -12,6 +12,7 @@ const simulation = ref(null)
 const loading = ref(true)
 const error = ref(null)
 const expandedAbstracts = ref(new Set())
+const expandedFullTexts = ref(new Set())
 
 onMounted(async () => {
   await loadSimulation()
@@ -64,6 +65,30 @@ const getAbstractPreview = (abstractText, index) => {
 
 const shouldShowExpander = (abstractText) => {
   return abstractText && abstractText.length > 200
+}
+
+const toggleFullText = (index) => {
+  if (expandedFullTexts.value.has(index)) {
+    expandedFullTexts.value.delete(index)
+  } else {
+    expandedFullTexts.value.add(index)
+  }
+  // Force reactivity update
+  expandedFullTexts.value = new Set(expandedFullTexts.value)
+}
+
+const isFullTextExpanded = (index) => {
+  return expandedFullTexts.value.has(index)
+}
+
+const getFullTextPreview = (fullText, index) => {
+  if (!fullText) return ''
+  if (isFullTextExpanded(index)) return fullText
+  return fullText.length > 500 ? fullText.substring(0, 500) + '...' : fullText
+}
+
+const shouldShowFullTextExpander = (fullText) => {
+  return fullText && fullText.length > 500
 }
 </script>
 
@@ -145,30 +170,41 @@ const shouldShowExpander = (abstractText) => {
           </div>
         </div>
 
-        <!-- Connection Changes -->
-        <div class="section changes-section">
-          <h2>Connection Changes ({{ simulation.connectionChanges?.length || 0 }})</h2>
-          <div v-if="simulation.connectionChanges && simulation.connectionChanges.length > 0" class="changes-list">
+        <!-- Brain Regions Mentioned in Research -->
+        <div class="section regions-section">
+          <h2>Brain Regions Mentioned in Research ({{ simulation.mentionedRegions?.length || 0 }})</h2>
+          <div v-if="simulation.mentionedRegions && simulation.mentionedRegions.length > 0" class="regions-list">
             <div
-              v-for="(change, index) in simulation.connectionChanges.slice(0, 10)"
+              v-for="(region, index) in simulation.mentionedRegions"
               :key="index"
-              class="change-item"
+              class="region-item"
             >
-              <div class="change-header">
-                <span class="region-name">{{ change.sourceRegion }}</span>
-                <span class="arrow">→</span>
-                <span class="region-name">{{ change.targetRegion }}</span>
+              <div class="region-header">
+                <h3 class="region-title">
+                  <span class="region-code">{{ region.regionCode }}</span>
+                  <span class="region-name-text">{{ region.regionName }}</span>
+                </h3>
+                <span class="mention-count">{{ region.mentions.length }} mention{{ region.mentions.length !== 1 ? 's' : '' }}</span>
               </div>
-              <div class="change-details">
-                <span class="change-type" :class="change.changeType">{{ change.changeType }}</span>
-                <span class="change-value">
-                  {{ change.beforeWeight.toFixed(2) }} → {{ change.afterWeight.toFixed(2) }}
-                  ({{ change.changePercentage > 0 ? '+' : '' }}{{ change.changePercentage.toFixed(1) }}%)
-                </span>
+
+              <div class="region-mentions">
+                <div
+                  v-for="(mention, mIndex) in region.mentions"
+                  :key="mIndex"
+                  class="mention-item"
+                >
+                  <div class="mention-header">
+                    <span class="context-badge" :class="`context-${mention.context}`">{{ mention.context }}</span>
+                    <a :href="`https://pubmed.ncbi.nlm.nih.gov/${mention.pubmedId}/`" target="_blank" class="mention-article">
+                      Study {{ mIndex + 1 }}
+                    </a>
+                  </div>
+                  <p class="mention-excerpt">{{ mention.excerpt }}</p>
+                </div>
               </div>
             </div>
           </div>
-          <p v-else class="no-data">No connection changes detected</p>
+          <p v-else class="no-data">No brain regions mentioned in research</p>
         </div>
 
         <!-- PubMed References -->
@@ -188,6 +224,7 @@ const shouldShowExpander = (abstractText) => {
               </div>
               <p class="reference-authors">{{ ref.authors }}</p>
               <div class="abstract-container">
+                <h4 class="section-label">Abstract</h4>
                 <p class="reference-abstract" :class="{ expanded: isExpanded(index) }">
                   {{ getAbstractPreview(ref.abstractText, index) }}
                 </p>
@@ -197,6 +234,19 @@ const shouldShowExpander = (abstractText) => {
                   class="expand-button"
                 >
                   {{ isExpanded(index) ? 'Show less' : 'Show more' }}
+                </button>
+              </div>
+              <div v-if="ref.fullText" class="full-text-container">
+                <h4 class="section-label">Full Text</h4>
+                <p class="reference-full-text" :class="{ expanded: isFullTextExpanded(index) }">
+                  {{ getFullTextPreview(ref.fullText, index) }}
+                </p>
+                <button
+                  v-if="shouldShowFullTextExpander(ref.fullText)"
+                  @click="toggleFullText(index)"
+                  class="expand-button"
+                >
+                  {{ isFullTextExpanded(index) ? 'Show less' : 'Show more' }}
                 </button>
               </div>
             </div>
@@ -457,71 +507,133 @@ const shouldShowExpander = (abstractText) => {
   color: #667eea;
 }
 
-/* Changes List */
-.changes-list {
+/* Brain Regions List */
+.regions-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-.change-item {
+.region-item {
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
-.change-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.region-name {
-  font-weight: 600;
-  color: var(--color-heading);
-  font-size: 0.95rem;
-}
-
-.arrow {
-  color: var(--color-text);
-}
-
-.change-details {
+.region-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.change-type {
+.region-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.region-code {
+  font-weight: 700;
+  color: #667eea;
+  font-size: 1.2rem;
+}
+
+.region-name-text {
+  font-weight: 500;
+  color: var(--color-heading);
+  font-size: 1rem;
+}
+
+.mention-count {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
   padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.region-mentions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mention-item {
+  background: var(--color-background);
+  border-left: 3px solid #667eea;
+  padding: 0.75rem;
   border-radius: 4px;
-  font-size: 0.8rem;
+}
+
+.mention-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.context-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
 }
 
-.change-type.STRENGTHENED {
+.context-badge.context-connectivity {
   background: rgba(46, 213, 115, 0.2);
   color: #27ae60;
 }
 
-.change-type.WEAKENED {
-  background: rgba(255, 107, 107, 0.2);
-  color: #e74c3c;
+.context-badge.context-activity {
+  background: rgba(255, 193, 7, 0.2);
+  color: #f39c12;
 }
 
-.change-type.MINIMAL_CHANGE {
-  background: rgba(102, 126, 234, 0.2);
+.context-badge.context-neuroplasticity {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9c27b0;
+}
+
+.context-badge.context-structure {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+}
+
+.context-badge.context-function {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.context-badge.context-general {
+  background: rgba(158, 158, 158, 0.2);
+  color: #757575;
+}
+
+.mention-article {
   color: #667eea;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-.change-value {
+.mention-article:hover {
+  text-decoration: underline;
+}
+
+.mention-excerpt {
   color: var(--color-text);
   font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
 }
 
 /* References */
@@ -575,6 +687,15 @@ const shouldShowExpander = (abstractText) => {
   font-style: italic;
 }
 
+.section-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 1rem 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .abstract-container {
   position: relative;
 }
@@ -588,6 +709,26 @@ const shouldShowExpander = (abstractText) => {
 }
 
 .reference-abstract.expanded {
+  white-space: pre-line;
+}
+
+.full-text-container {
+  position: relative;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.reference-full-text {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 0.5rem 0;
+  transition: max-height 0.3s ease;
+  white-space: pre-line;
+}
+
+.reference-full-text.expanded {
   white-space: pre-line;
 }
 

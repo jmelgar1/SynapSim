@@ -2,6 +2,7 @@ package com.synapsim.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.synapsim.dto.BrainNetworkDTO;
+import com.synapsim.dto.MentionedRegionDTO;
 import com.synapsim.dto.PubMedArticleDTO;
 import com.synapsim.dto.ScenarioRequest;
 import com.synapsim.dto.SimulationResponse;
@@ -57,19 +58,10 @@ public class SimulationService {
             simulation.setExecutedAt(LocalDateTime.now());
             simulation = simulationRepository.save(simulation);
 
-            // 3. Build brain network graph
-            Graph<String, DefaultWeightedEdge> originalGraph = brainNetworkService.buildBrainGraph();
-            Graph<String, DefaultWeightedEdge> modifiedGraph = brainNetworkService.buildBrainGraph();
-
-            // 4. Apply neuroplasticity changes
-            Map<String, Map<String, Double>> changes = brainNetworkService.applyNeuroplasticityChanges(
-                    modifiedGraph, scenario
-            );
-
-            // 5. Search for relevant research articles
+            // 3. Search for relevant research articles FIRST
             List<PubMedArticleDTO> articles = searchRelevantResearch(scenario);
 
-            // 5.1. Check if any research was found - if not, throw error
+            // 3.1. Check if any research was found - if not, throw error
             if (articles.isEmpty()) {
                 log.warn("No relevant research found for compound={}, setting={}",
                         scenario.getCompoundInspiration(), scenario.getTherapeuticSetting());
@@ -79,34 +71,47 @@ public class SimulationService {
                 );
             }
 
-            // 6. Save PubMed references
+            // 4. Extract brain regions mentioned in research abstracts
+            Map<String, List<String>> regionAliasMap = brainNetworkService.buildRegionAliasMap();
+            Set<String> mentionedRegionCodes = pubMedService.extractMentionedRegions(articles, regionAliasMap);
+
+            log.info("Found {} brain regions mentioned in research articles: {}",
+                    mentionedRegionCodes.size(), mentionedRegionCodes);
+
+            // 5. Build filtered brain network graph with only mentioned regions
+            Graph<String, DefaultWeightedEdge> originalGraph = brainNetworkService.buildFilteredBrainGraph(mentionedRegionCodes);
+            Graph<String, DefaultWeightedEdge> modifiedGraph = brainNetworkService.buildFilteredBrainGraph(mentionedRegionCodes);
+
+            // 6. Apply neuroplasticity changes to filtered graph
+            Map<String, Map<String, Double>> changes = brainNetworkService.applyNeuroplasticityChanges(
+                    modifiedGraph, scenario
+            );
+
+            // 7. Save PubMed references
             savePubMedReferences(simulation, articles);
 
-            // 7. Generate network state JSON
+            // 8. Generate network state JSON
             BrainNetworkDTO networkState = brainNetworkService.convertGraphToDTO(modifiedGraph);
             String networkStateJson = objectMapper.writeValueAsString(networkState);
 
-            // 8. Generate connection changes JSON
-            List<SimulationResponse.ConnectionChangeDTO> connectionChanges =
-                    brainNetworkService.generateConnectionChanges(changes, originalGraph);
+            // 9. Extract mentioned regions with research context
+            List<MentionedRegionDTO> mentionedRegions = extractMentionedRegionsWithContext(articles, mentionedRegionCodes);
+            String mentionedRegionsJson = objectMapper.writeValueAsString(mentionedRegions);
 
-            // 8.1. Annotate connection changes with research findings
-            annotateConnectionChangesWithResearch(connectionChanges, articles);
+            log.info("Extracted {} brain regions with research context", mentionedRegions.size());
 
-            String connectionChangesJson = objectMapper.writeValueAsString(connectionChanges);
+            // 10. Generate prediction summary and confidence score
+            String predictionSummary = generatePredictionSummary(scenario, mentionedRegions, articles);
+            double confidenceScore = calculateConfidenceScore(mentionedRegions, articles.size());
 
-            // 9. Generate prediction summary and confidence score
-            String predictionSummary = generatePredictionSummary(scenario, connectionChanges, articles);
-            double confidenceScore = calculateConfidenceScore(connectionChanges, articles.size());
+            // 11. Determine success and badge
+            boolean success = determineSuccess(confidenceScore, mentionedRegions);
+            String badge = determineBadge(scenario, success, mentionedRegions);
 
-            // 10. Determine success and badge
-            boolean success = determineSuccess(confidenceScore, connectionChanges);
-            String badge = determineBadge(scenario, success, connectionChanges);
-
-            // 11. Update simulation with results
+            // 12. Update simulation with results
             simulation.setStatus(Simulation.SimulationStatus.COMPLETED);
             simulation.setNetworkState(networkStateJson);
-            simulation.setConnectionChanges(connectionChangesJson);
+            simulation.setConnectionChanges(mentionedRegionsJson); // Reusing field to store mentioned regions
             simulation.setPredictionSummary(predictionSummary);
             simulation.setConfidenceScore(confidenceScore);
             simulation.setSuccess(success);
@@ -119,8 +124,8 @@ public class SimulationService {
 
             log.info("Simulation completed in {}ms with confidence score: {}", processingTime, confidenceScore);
 
-            // 12. Build and return response
-            return buildSimulationResponse(simulation, networkState, connectionChanges, articles);
+            // 13. Build and return response
+            return buildSimulationResponse(simulation, networkState, mentionedRegions, articles);
 
         } catch (Exception e) {
             log.error("Error running simulation: {}", e.getMessage(), e);
@@ -141,10 +146,10 @@ public class SimulationService {
                     simulation.getNetworkState(), BrainNetworkDTO.class
             );
 
-            List<SimulationResponse.ConnectionChangeDTO> connectionChanges = objectMapper.readValue(
+            List<MentionedRegionDTO> mentionedRegions = objectMapper.readValue(
                     simulation.getConnectionChanges(),
                     objectMapper.getTypeFactory().constructCollectionType(
-                            List.class, SimulationResponse.ConnectionChangeDTO.class
+                            List.class, MentionedRegionDTO.class
                     )
             );
 
@@ -153,7 +158,7 @@ public class SimulationService {
                     .map(this::convertToPubMedDTO)
                     .collect(Collectors.toList());
 
-            return buildSimulationResponse(simulation, networkState, connectionChanges, articles);
+            return buildSimulationResponse(simulation, networkState, mentionedRegions, articles);
 
         } catch (Exception e) {
             log.error("Error retrieving simulation: {}", e.getMessage(), e);
@@ -172,17 +177,17 @@ public class SimulationService {
                         BrainNetworkDTO networkState = objectMapper.readValue(
                                 sim.getNetworkState(), BrainNetworkDTO.class
                         );
-                        List<SimulationResponse.ConnectionChangeDTO> connectionChanges = objectMapper.readValue(
+                        List<MentionedRegionDTO> mentionedRegions = objectMapper.readValue(
                                 sim.getConnectionChanges(),
                                 objectMapper.getTypeFactory().constructCollectionType(
-                                        List.class, SimulationResponse.ConnectionChangeDTO.class
+                                        List.class, MentionedRegionDTO.class
                                 )
                         );
                         List<PubMedArticleDTO> articles = sim.getPubmedReferences().stream()
                                 .map(this::convertToPubMedDTO)
                                 .collect(Collectors.toList());
 
-                        return buildSimulationResponse(sim, networkState, connectionChanges, articles);
+                        return buildSimulationResponse(sim, networkState, mentionedRegions, articles);
                     } catch (Exception e) {
                         log.error("Error parsing simulation {}: {}", sim.getId(), e.getMessage());
                         return null;
@@ -236,6 +241,7 @@ public class SimulationService {
             reference.setAuthors(article.getAuthors());
             reference.setPublicationDate(article.getPublicationDate());
             reference.setAbstractText(article.getAbstractText());
+            reference.setFullText(article.getFullText());
             reference.setArticleUrl(article.getArticleUrl());
             reference.setRelevanceScore(article.getRelevanceScore());
             reference.setKeywords(article.getKeywords());
@@ -249,28 +255,10 @@ public class SimulationService {
      */
     private String generatePredictionSummary(
             Scenario scenario,
-            List<SimulationResponse.ConnectionChangeDTO> changes,
+            List<MentionedRegionDTO> mentionedRegions,
             List<PubMedArticleDTO> articles
     ) {
         StringBuilder summary = new StringBuilder();
-
-        // Count increases and decreases
-        long increases = changes.stream()
-                .filter(c -> c.getChangeType().equals("INCREASED"))
-                .count();
-        long decreases = changes.stream()
-                .filter(c -> c.getChangeType().equals("DECREASED"))
-                .count();
-
-        // Get top 3 most significant changes
-        List<SimulationResponse.ConnectionChangeDTO> topChanges = changes.stream()
-                .limit(3)
-                .collect(Collectors.toList());
-
-        // Get highest relevance article for insights
-        PubMedArticleDTO topArticle = articles.stream()
-                .max(Comparator.comparing(PubMedArticleDTO::getRelevanceScore))
-                .orElse(articles.get(0));
 
         // Extract research insights from top articles
         String researchInsights = extractResearchInsights(articles, scenario);
@@ -285,24 +273,20 @@ public class SimulationService {
         summary.append(researchInsights);
         summary.append(". ");
 
-        // Add simulation-specific findings
-        summary.append(String.format("Our simulation demonstrates these effects through %d strengthened and %d weakened neural connections. ",
-                increases, decreases));
+        // Add brain regions mentioned in research
+        summary.append(String.format("Research specifically discusses %d brain regions: ",
+                mentionedRegions.size()));
 
-        summary.append("Key connectivity changes: ");
-        for (int i = 0; i < topChanges.size(); i++) {
-            SimulationResponse.ConnectionChangeDTO change = topChanges.get(i);
-            if (i > 0) summary.append(", ");
-            summary.append(String.format("%s-%s (%s%.1f%%)",
-                    extractCode(change.getSourceRegion()),
-                    extractCode(change.getTargetRegion()),
-                    change.getChangePercentage() > 0 ? "+" : "",
-                    change.getChangePercentage()));
-        }
+        List<String> topRegions = mentionedRegions.stream()
+                .limit(5)
+                .map(MentionedRegionDTO::getRegionCode)
+                .collect(Collectors.toList());
+
+        summary.append(String.join(", ", topRegions));
         summary.append(". ");
 
         // Add therapeutic implications based on research
-        summary.append(generateResearchBasedImplications(scenario, articles, topChanges));
+        summary.append(generateResearchBasedImplications(scenario, articles, mentionedRegions));
 
         return summary.toString();
     }
@@ -368,7 +352,7 @@ public class SimulationService {
     private String generateResearchBasedImplications(
             Scenario scenario,
             List<PubMedArticleDTO> articles,
-            List<SimulationResponse.ConnectionChangeDTO> topChanges
+            List<MentionedRegionDTO> mentionedRegions
     ) {
         StringBuilder implications = new StringBuilder();
 
@@ -417,76 +401,9 @@ public class SimulationService {
             }
         }
 
-        implications.append(". These findings align with the observed network reorganization in our simulation");
+        implications.append(". These findings align with the brain regions identified in our analysis");
 
         return implications.toString();
-    }
-
-    /**
-     * Annotate connection changes with relevant research findings
-     * Scans research abstracts for mentions of brain regions
-     */
-    private void annotateConnectionChangesWithResearch(
-            List<SimulationResponse.ConnectionChangeDTO> connectionChanges,
-            List<PubMedArticleDTO> articles
-    ) {
-        // Map region codes to their full names and common variations
-        Map<String, List<String>> regionAliases = buildRegionAliasMap();
-
-        // Process top 5 most relevant articles
-        for (PubMedArticleDTO article : articles.stream().limit(5).toList()) {
-            String abstractLower = article.getAbstractText() != null ?
-                    article.getAbstractText().toLowerCase() : "";
-            String titleLower = article.getTitle().toLowerCase();
-            String combinedText = titleLower + " " + abstractLower;
-
-            // Check each connection change
-            for (SimulationResponse.ConnectionChangeDTO change : connectionChanges) {
-                // Skip if already has a research note
-                if (change.getResearchNote() != null) {
-                    continue;
-                }
-
-                String sourceCode = extractCode(change.getSourceRegion());
-                String targetCode = extractCode(change.getTargetRegion());
-
-                // Get possible names for these regions
-                List<String> sourceNames = regionAliases.getOrDefault(sourceCode, List.of(sourceCode.toLowerCase()));
-                List<String> targetNames = regionAliases.getOrDefault(targetCode, List.of(targetCode.toLowerCase()));
-
-                // Check if either region is mentioned (more lenient than requiring both)
-                boolean mentionsSourceRegion = false;
-                boolean mentionsTargetRegion = false;
-
-                for (String sourceName : sourceNames) {
-                    if (combinedText.contains(sourceName)) {
-                        mentionsSourceRegion = true;
-                        break;
-                    }
-                }
-
-                for (String targetName : targetNames) {
-                    if (combinedText.contains(targetName)) {
-                        mentionsTargetRegion = true;
-                        break;
-                    }
-                }
-
-                // Generate note if at least one region is mentioned
-                if (mentionsSourceRegion || mentionsTargetRegion) {
-                    String note = generateRegionBasedNote(
-                            mentionsSourceRegion, mentionsTargetRegion,
-                            sourceCode, targetCode, combinedText, change.getChangeType()
-                    );
-                    if (note != null) {
-                        change.setResearchNote(note);
-                    }
-                }
-            }
-        }
-
-        log.info("Annotated {} connection changes with research findings",
-                connectionChanges.stream().filter(c -> c.getResearchNote() != null).count());
     }
 
     /**
@@ -510,52 +427,145 @@ public class SimulationService {
     }
 
     /**
-     * Generate a research note based on which brain regions are mentioned
+     * Get full region name from code
      */
-    private String generateRegionBasedNote(
-            boolean mentionsSource, boolean mentionsTarget,
-            String sourceCode, String targetCode,
-            String text, String changeType
+    private String getRegionName(String code) {
+        Map<String, String> codeToName = Map.ofEntries(
+                Map.entry("mPFC", "Medial Prefrontal Cortex"),
+                Map.entry("PCC", "Posterior Cingulate Cortex"),
+                Map.entry("AHP", "Anterior Hippocampus"),
+                Map.entry("AMY", "Amygdala"),
+                Map.entry("V1", "Visual Cortex"),
+                Map.entry("A1", "Auditory Cortex"),
+                Map.entry("THL", "Thalamus"),
+                Map.entry("AMC", "Anteromedial Caudate"),
+                Map.entry("FP", "Frontoparietal Regions"),
+                Map.entry("CBL", "Cerebellum")
+        );
+        return codeToName.getOrDefault(code, code);
+    }
+
+    /**
+     * Extract mentioned brain regions from research articles with context
+     */
+    private List<MentionedRegionDTO> extractMentionedRegionsWithContext(
+            List<PubMedArticleDTO> articles,
+            Set<String> mentionedRegionCodes
     ) {
-        // Connectivity-related keywords to look for
-        String[] connectivityKeywords = {"connectivity", "connection", "coupling", "communication",
-                                        "network", "integration", "correlation", "functional connectivity"};
+        Map<String, List<String>> regionAliases = buildRegionAliasMap();
+        Map<String, MentionedRegionDTO> regionMap = new HashMap<>();
 
-        boolean mentionsConnectivity = false;
-        for (String keyword : connectivityKeywords) {
-            if (text.contains(keyword)) {
-                mentionsConnectivity = true;
-                break;
+        // Initialize DTOs for each mentioned region
+        for (String regionCode : mentionedRegionCodes) {
+            MentionedRegionDTO dto = MentionedRegionDTO.builder()
+                    .regionCode(regionCode)
+                    .regionName(getRegionName(regionCode))
+                    .mentions(new ArrayList<>())
+                    .build();
+            regionMap.put(regionCode, dto);
+        }
+
+        // Scan articles for mentions
+        for (PubMedArticleDTO article : articles) {
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText() : "";
+            String fullText = article.getFullText() != null ? article.getFullText() : "";
+            String title = article.getTitle() != null ? article.getTitle() : "";
+
+            // Combine all text sources
+            String combinedText = title + " " + abstractText + " " + fullText;
+            String lowerText = combinedText.toLowerCase();
+
+            // Check each mentioned region
+            for (String regionCode : mentionedRegionCodes) {
+                List<String> aliases = regionAliases.getOrDefault(regionCode, List.of(regionCode.toLowerCase()));
+
+                // Find sentences mentioning this region
+                for (String alias : aliases) {
+                    if (lowerText.contains(alias.toLowerCase())) {
+                        // Extract relevant excerpt containing the region mention
+                        String excerpt = extractExcerpt(combinedText, alias);
+                        String context = determineContext(excerpt);
+
+                        if (excerpt != null && !excerpt.isEmpty()) {
+                            MentionedRegionDTO.ResearchMention mention = MentionedRegionDTO.ResearchMention.builder()
+                                    .articleTitle(article.getTitle())
+                                    .pubmedId(article.getPubmedId())
+                                    .excerpt(excerpt)
+                                    .context(context)
+                                    .build();
+
+                            regionMap.get(regionCode).addMention(mention);
+                            break; // Only one mention per article per region
+                        }
+                    }
+                }
             }
         }
 
-        // Case 1: Both regions mentioned
-        if (mentionsSource && mentionsTarget) {
-            if (mentionsConnectivity) {
-                return String.format("Research discusses %s-%s connectivity", sourceCode, targetCode);
-            } else {
-                return String.format("Research mentions both %s and %s regions", sourceCode, targetCode);
-            }
+        // Filter out regions with no mentions and return sorted by mention count
+        return regionMap.values().stream()
+                .filter(dto -> dto.getMentions() != null && !dto.getMentions().isEmpty())
+                .sorted((a, b) -> Integer.compare(b.getMentions().size(), a.getMentions().size()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extract a relevant excerpt around the region mention
+     */
+    private String extractExcerpt(String text, String keyword) {
+        String lowerText = text.toLowerCase();
+        String lowerKeyword = keyword.toLowerCase();
+
+        int index = lowerText.indexOf(lowerKeyword);
+        if (index == -1) {
+            return null;
         }
 
-        // Case 2: Only one region mentioned
-        String mentionedRegion = mentionsSource ? sourceCode : targetCode;
+        // Find sentence boundaries
+        int sentenceStart = text.lastIndexOf('.', index);
+        if (sentenceStart == -1) sentenceStart = 0;
+        else sentenceStart++; // Skip the period
 
-        // Look for common neuroscience terms
-        boolean mentionsActivity = text.contains("activity") || text.contains("activation");
-        boolean mentionsPlasticity = text.contains("plasticity") || text.contains("neuroplasticity");
-        boolean mentionsFunctional = text.contains("functional") || text.contains("function");
+        int sentenceEnd = text.indexOf('.', index + keyword.length());
+        if (sentenceEnd == -1) sentenceEnd = text.length();
+        else sentenceEnd++; // Include the period
 
-        if (mentionsConnectivity) {
-            return String.format("Research discusses %s connectivity patterns", mentionedRegion);
-        } else if (mentionsPlasticity) {
-            return String.format("Research reports neuroplasticity in %s", mentionedRegion);
-        } else if (mentionsActivity) {
-            return String.format("Research examines %s activity", mentionedRegion);
-        } else if (mentionsFunctional) {
-            return String.format("Research explores %s function", mentionedRegion);
+        // Extract the sentence
+        String excerpt = text.substring(sentenceStart, sentenceEnd).trim();
+
+        // If excerpt is too long, try to shorten it
+        if (excerpt.length() > 300) {
+            // Try to get just the clause containing the keyword
+            int start = Math.max(0, index - 150);
+            int end = Math.min(text.length(), index + keyword.length() + 150);
+            excerpt = "..." + text.substring(start, end).trim() + "...";
+        }
+
+        return excerpt;
+    }
+
+    /**
+     * Determine the context of the region mention
+     */
+    private String determineContext(String excerpt) {
+        String lowerExcerpt = excerpt.toLowerCase();
+
+        if (lowerExcerpt.contains("connectivity") || lowerExcerpt.contains("connection") ||
+            lowerExcerpt.contains("network") || lowerExcerpt.contains("coupling")) {
+            return "connectivity";
+        } else if (lowerExcerpt.contains("activity") || lowerExcerpt.contains("activation") ||
+                   lowerExcerpt.contains("active")) {
+            return "activity";
+        } else if (lowerExcerpt.contains("neuroplasticity") || lowerExcerpt.contains("plasticity") ||
+                   lowerExcerpt.contains("synaptic")) {
+            return "neuroplasticity";
+        } else if (lowerExcerpt.contains("volume") || lowerExcerpt.contains("density") ||
+                   lowerExcerpt.contains("structure")) {
+            return "structure";
+        } else if (lowerExcerpt.contains("function") || lowerExcerpt.contains("functional")) {
+            return "function";
         } else {
-            return String.format("Research discusses %s region", mentionedRegion);
+            return "general";
         }
     }
 
@@ -563,7 +573,7 @@ public class SimulationService {
      * Calculate confidence score based on simulation quality
      */
     private double calculateConfidenceScore(
-            List<SimulationResponse.ConnectionChangeDTO> changes,
+            List<MentionedRegionDTO> mentionedRegions,
             int researchCount
     ) {
         double score = 0.0;
@@ -571,18 +581,14 @@ public class SimulationService {
         // Base score from research availability (0-0.4)
         score += Math.min(0.4, researchCount * 0.08);
 
-        // Score from number of significant changes (0-0.3)
-        long significantChanges = changes.stream()
-                .filter(c -> Math.abs(c.getChangePercentage()) > 10.0)
-                .count();
-        score += Math.min(0.3, significantChanges * 0.05);
+        // Score from number of mentioned regions (0-0.3)
+        score += Math.min(0.3, mentionedRegions.size() * 0.05);
 
-        // Score from magnitude of changes (0-0.3)
-        double avgMagnitude = changes.stream()
-                .mapToDouble(c -> Math.abs(c.getChangePercentage()))
-                .average()
-                .orElse(0.0);
-        score += Math.min(0.3, avgMagnitude / 100.0);
+        // Score from number of research mentions across regions (0-0.3)
+        int totalMentions = mentionedRegions.stream()
+                .mapToInt(r -> r.getMentions() != null ? r.getMentions().size() : 0)
+                .sum();
+        score += Math.min(0.3, totalMentions * 0.03);
 
         return Math.min(1.0, score);
     }
@@ -592,17 +598,15 @@ public class SimulationService {
      */
     private boolean determineSuccess(
             double confidenceScore,
-            List<SimulationResponse.ConnectionChangeDTO> changes
+            List<MentionedRegionDTO> mentionedRegions
     ) {
         // Success criteria:
         // 1. Confidence score above 0.5
-        // 2. At least 3 significant changes
+        // 2. At least 3 brain regions mentioned in research
         boolean highConfidence = confidenceScore >= 0.5;
-        long significantChanges = changes.stream()
-                .filter(c -> Math.abs(c.getChangePercentage()) > 10.0)
-                .count();
+        boolean sufficientRegions = mentionedRegions.size() >= 3;
 
-        return highConfidence && significantChanges >= 3;
+        return highConfidence && sufficientRegions;
     }
 
     /**
@@ -611,13 +615,13 @@ public class SimulationService {
     private String determineBadge(
             Scenario scenario,
             boolean success,
-            List<SimulationResponse.ConnectionChangeDTO> changes
+            List<MentionedRegionDTO> mentionedRegions
     ) {
         if (!success) {
             return null;
         }
 
-        // Determine badge based on quest type and changes
+        // Determine badge based on quest type
         String questId = scenario.getQuestId();
         if (questId != null && !questId.isEmpty()) {
             return switch (questId.toLowerCase()) {
@@ -644,7 +648,7 @@ public class SimulationService {
     private SimulationResponse buildSimulationResponse(
             Simulation simulation,
             BrainNetworkDTO networkState,
-            List<SimulationResponse.ConnectionChangeDTO> connectionChanges,
+            List<MentionedRegionDTO> mentionedRegions,
             List<PubMedArticleDTO> articles
     ) {
         return SimulationResponse.builder()
@@ -654,7 +658,7 @@ public class SimulationService {
                 .executedAt(simulation.getExecutedAt())
                 .processingTimeMs(simulation.getProcessingTimeMs())
                 .networkState(networkState)
-                .connectionChanges(connectionChanges)
+                .mentionedRegions(mentionedRegions)
                 .predictionSummary(simulation.getPredictionSummary())
                 .confidenceScore(simulation.getConfidenceScore())
                 .success(simulation.getSuccess())
@@ -673,6 +677,7 @@ public class SimulationService {
                 .authors(reference.getAuthors())
                 .publicationDate(reference.getPublicationDate())
                 .abstractText(reference.getAbstractText())
+                .fullText(reference.getFullText())
                 .articleUrl(reference.getArticleUrl())
                 .relevanceScore(reference.getRelevanceScore())
                 .keywords(reference.getKeywords())
