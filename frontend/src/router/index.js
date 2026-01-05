@@ -25,6 +25,11 @@ const router = createRouter({
       component: () => import('../views/ScenarioBuilder.vue'),
     },
     {
+      path: '/simulation/:id',
+      name: 'simulation-results',
+      component: () => import('../views/SimulationResults.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting

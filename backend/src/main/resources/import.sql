@@ -1,72 +1,171 @@
--- Brain Regions Seed Data
--- These represent key brain regions involved in psychedelic research
+-- =====================================================
+-- SYNAPSIM BRAIN REGIONS AND CONNECTIONS SEED DATA
+-- Enhanced version with 80 comprehensive brain regions
+-- Based on Wikipedia's list of human brain regions
+-- =====================================================
 
-INSERT INTO brain_regions (id, name, code, description, function_description, position_x, position_y, baseline_activity, neuroplasticity_potential) VALUES
-(1, 'Prefrontal Cortex', 'PFC', 'The prefrontal cortex is the cerebral cortex covering the front part of the frontal lobe.', 'Executive functions, decision-making, planning, impulse control, and emotional regulation.', 200.0, 100.0, 0.65, 0.75),
-(2, 'Amygdala', 'AMY', 'An almond-shaped structure deep in the brain, part of the limbic system.', 'Processing emotions, especially fear and anxiety responses; emotional memory formation.', 100.0, 300.0, 0.70, 0.80),
-(3, 'Hippocampus', 'HPC', 'A curved structure in the medial temporal lobe, critical for memory.', 'Memory formation, consolidation, and spatial navigation; stress response regulation.', 150.0, 350.0, 0.60, 0.85),
-(4, 'Anterior Cingulate Cortex', 'ACC', 'A collar-shaped region surrounding the corpus callosum.', 'Conflict monitoring, error detection, emotional regulation, and empathy.', 250.0, 200.0, 0.55, 0.70),
-(5, 'Insula', 'INS', 'A region located deep within the lateral sulcus of the brain.', 'Interoception, emotional awareness, empathy, and self-awareness.', 300.0, 250.0, 0.50, 0.65),
-(6, 'Default Mode Network Hub', 'DMN', 'A network of interacting brain regions active during rest and self-referential thinking.', 'Self-reflection, autobiographical memory, theory of mind, and mind-wandering.', 200.0, 50.0, 0.75, 0.60),
-(7, 'Thalamus', 'THL', 'A large mass of gray matter in the dorsal part of the diencephalon.', 'Sensory relay station, consciousness regulation, and sleep-wake cycles.', 200.0, 300.0, 0.80, 0.55),
-(8, 'Ventral Tegmental Area', 'VTA', 'A group of neurons located in the midbrain.', 'Reward processing, motivation, and dopamine release; pleasure and reinforcement.', 350.0, 350.0, 0.60, 0.70),
-(9, 'Posterior Cingulate Cortex', 'PCC', 'A posterior part of the cingulate cortex, connected to the DMN.', 'Episodic memory retrieval, self-referential processing, and consciousness.', 150.0, 150.0, 0.65, 0.65),
-(10, 'Visual Cortex', 'V1', 'The primary visual cortex located in the occipital lobe.', 'Processing visual information; altered in psychedelic experiences.', 50.0, 200.0, 0.70, 0.50);
+-- =====================================================
+-- BRAIN REGIONS (IDs 1-80)
+-- =====================================================
 
--- Neural Connections Seed Data
--- Baseline connections between brain regions with their default strengths
+-- Original 10 Core Regions (IDs 1-10)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (1, 'Medial Prefrontal Cortex', 'mPFC', 'Key hub of the Default Mode Network in the frontal lobe.', 'Hub for self-awareness; shows decreased activity and decoupling, promoting flexible thinking.', 200.0, 100.0, 0.70, 0.85, 'Default Mode Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (2, 'Posterior Cingulate Cortex', 'PCC', 'A posterior part of the cingulate cortex, central to the DMN.', 'Integrates personal experiences; connectivity weakens, linked to ego dissolution.', 150.0, 150.0, 0.68, 0.80, 'Default Mode Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (3, 'Anterior Hippocampus', 'AHP', 'Anterior portion of the hippocampus, critical for memory and DMN connectivity.', 'Handles memory; reduced functional connectivity with DMN during and post-trip, aiding insights.', 180.0, 320.0, 0.62, 0.90, 'Default Mode Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (4, 'Amygdala', 'AMY', 'Almond-shaped structure deep in the brain, part of the limbic system.', 'Processes emotions; decreased reactivity and altered connectivity, reducing fear.', 100.0, 280.0, 0.72, 0.85, 'Salience Network, Limbic System');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (5, 'Visual Cortex', 'V1', 'Primary visual cortex in the occipital lobe.', 'Increased activity and connections, contributing to hallucinations.', 50.0, 200.0, 0.75, 0.70, 'Sensory Networks');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (6, 'Auditory Cortex', 'A1', 'Primary auditory cortex in the temporal lobe.', 'Heightened integration with other areas, enhancing perceptual changes.', 80.0, 240.0, 0.68, 0.72, 'Sensory Networks');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (7, 'Thalamus', 'THL', 'Mediodorsal and paraventricular nuclei of the thalamus.', 'Relays signals; desynchronizes, allowing novel information flow.', 200.0, 280.0, 0.82, 0.65, 'Thalamo-Cortical Networks');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (8, 'Anteromedial Caudate', 'AMC', 'Part of the basal ganglia with DMN connections.', 'Involved in motivation; shows connectivity changes for behavioral flexibility.', 220.0, 260.0, 0.58, 0.75, 'Subcortical Networks, DMN-linked');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (9, 'Frontoparietal Regions', 'FP', 'Distributed regions across frontal and parietal cortices.', 'Attention control; increased integration with sensory and limbic systems.', 280.0, 180.0, 0.65, 0.78, 'Frontoparietal Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (10, 'Cerebellum', 'CBL', 'DMN-connected parts of the cerebellum.', 'Motor and cognitive roles; exhibits functional connectivity shifts.', 200.0, 400.0, 0.60, 0.68, 'Cerebellar Networks, DMN');
 
--- PFC connections (executive control)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(1, 2, 0.60, 0.60, 'INHIBITORY', true, 'PFC regulates amygdala activity, reducing emotional reactivity'),
-(1, 4, 0.70, 0.70, 'EXCITATORY', true, 'PFC and ACC work together for cognitive control'),
-(1, 6, 0.55, 0.55, 'MODULATORY', true, 'PFC modulates DMN during task-focused activities'),
-(1, 7, 0.65, 0.65, 'EXCITATORY', true, 'PFC-thalamus connection for attention and awareness');
+-- Enhanced Brain Regions (IDs 11-80)
 
--- Amygdala connections (emotional processing)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(2, 3, 0.75, 0.75, 'EXCITATORY', true, 'Amygdala-hippocampus connection for emotional memory formation'),
-(2, 4, 0.65, 0.65, 'EXCITATORY', true, 'Emotional signals to ACC for conflict monitoring'),
-(2, 5, 0.70, 0.70, 'EXCITATORY', true, 'Amygdala-insula connection for emotional awareness'),
-(2, 7, 0.80, 0.80, 'EXCITATORY', true, 'Amygdala receives sensory input from thalamus');
+-- HINDBRAIN
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (11, 'Medulla Oblongata', 'MED', 'Most caudal part of the brainstem', 'Controls vital autonomic functions including heart rate, breathing, and blood pressure regulation', 200.0, 500.0, 0.85, 0.45, 'Brainstem, Autonomic');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (12, 'Locus Coeruleus', 'LC', 'Small nucleus in the pons, primary source of norepinephrine', 'Major noradrenergic nucleus; modulates arousal, attention, and stress responses. Critical for psychedelic effects', 210.0, 470.0, 0.70, 0.80, 'Noradrenergic System, Arousal');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (13, 'Dorsal Raphe Nucleus', 'DRN', 'Major serotonergic nucleus in the midbrain', 'Primary source of serotonin; key target of psychedelics. Modulates mood, anxiety, and perception', 200.0, 450.0, 0.75, 0.90, 'Serotonergic System, Brainstem');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (14, 'Pons', 'PONS', 'Part of the brainstem connecting medulla and midbrain', 'Relays signals between cerebrum and cerebellum; involved in arousal, sleep, and respiration', 200.0, 480.0, 0.80, 0.50, 'Brainstem');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (15, 'Cerebellar Vermis', 'VERMIS', 'Midline structure of the cerebellum', 'Motor coordination and postural control; cognitive and emotional processing', 200.0, 420.0, 0.65, 0.70, 'Cerebellar Networks');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (16, 'Dentate Nucleus', 'DN', 'Largest of the deep cerebellar nuclei', 'Motor planning and timing; cognitive functions via connections to prefrontal cortex', 180.0, 410.0, 0.60, 0.65, 'Cerebellar Networks');
 
--- Hippocampus connections (memory and stress)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(3, 6, 0.70, 0.70, 'EXCITATORY', true, 'Hippocampus-DMN connection for autobiographical memory'),
-(3, 9, 0.65, 0.65, 'EXCITATORY', true, 'Hippocampus-PCC for memory retrieval'),
-(3, 1, 0.55, 0.55, 'MODULATORY', true, 'Hippocampus provides context to PFC for decision-making');
+-- MIDBRAIN
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (17, 'Periaqueductal Gray', 'PAG', 'Gray matter around the cerebral aqueduct', 'Pain modulation, defensive behaviors, and emotional responses. Altered by psychedelics', 200.0, 440.0, 0.68, 0.75, 'Pain Modulation, Emotional');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (18, 'Ventral Tegmental Area', 'VTA', 'Dopaminergic nucleus in the midbrain', 'Key part of reward circuit; source of mesocorticolimbic dopamine. Influences motivation and reward processing', 190.0, 450.0, 0.72, 0.85, 'Dopaminergic System, Reward');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (19, 'Substantia Nigra', 'SN', 'Basal ganglia structure in the midbrain', 'Dopamine production for motor control and reward; degeneration causes Parkinsons', 185.0, 455.0, 0.70, 0.60, 'Dopaminergic System, Motor');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (20, 'Superior Colliculus', 'SC', 'Part of the tectum in the midbrain', 'Visual and multisensory integration for orienting eye and head movements', 205.0, 445.0, 0.73, 0.60, 'Sensory Integration, Visual');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (21, 'Inferior Colliculus', 'IC', 'Part of the tectum in the midbrain', 'Auditory relay and processing; integrates auditory information', 195.0, 448.0, 0.72, 0.58, 'Auditory System');
 
--- ACC connections (emotional regulation and empathy)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(4, 5, 0.75, 0.75, 'EXCITATORY', true, 'ACC-insula connection crucial for empathy and emotional awareness'),
-(4, 6, 0.60, 0.60, 'MODULATORY', true, 'ACC monitors DMN activity for self-reflection'),
-(4, 8, 0.55, 0.55, 'EXCITATORY', true, 'ACC-VTA connection for motivation and reward processing');
+-- FOREBRAIN - Diencephalon
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (22, 'Pineal Gland', 'PIN', 'Endocrine gland in the epithalamus', 'Produces melatonin; regulates circadian rhythms and sleep-wake cycles', 200.0, 360.0, 0.55, 0.50, 'Circadian, Endocrine');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (23, 'Habenular Nuclei', 'HB', 'Pair of small nuclei in the epithalamus', 'Links forebrain to midbrain; involved in pain, reward, and aversion. Modulates serotonin and dopamine', 205.0, 355.0, 0.63, 0.70, 'Limbic System, Reward');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (24, 'Medial Dorsal Nucleus', 'MD', 'Thalamic nucleus with prefrontal connections', 'Relays information to prefrontal cortex; involved in emotion, cognition, and memory', 195.0, 290.0, 0.70, 0.75, 'Thalamo-Cortical, Cognitive');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (25, 'Pulvinar', 'PUL', 'Largest thalamic nucleus', 'Higher-order visual processing and attention; integrates information across cortical areas', 210.0, 285.0, 0.68, 0.70, 'Thalamo-Cortical, Visual, Attention');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (26, 'Lateral Geniculate Nucleus', 'LGN', 'Visual relay nucleus in the thalamus', 'Primary relay for visual information from retina to visual cortex', 215.0, 295.0, 0.78, 0.60, 'Thalamo-Cortical, Visual');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (27, 'Medial Geniculate Nucleus', 'MGN', 'Auditory relay nucleus in the thalamus', 'Primary relay for auditory information to auditory cortex', 190.0, 295.0, 0.75, 0.60, 'Thalamo-Cortical, Auditory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (28, 'Anterior Thalamic Nuclei', 'AN', 'Part of the limbic system in thalamus', 'Memory and spatial navigation; part of Papez circuit for emotion', 200.0, 275.0, 0.66, 0.80, 'Limbic System, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (29, 'Intralaminar Nuclei', 'IL', 'Central thalamic nuclei', 'Arousal and attention; modulates cortical excitability', 200.0, 288.0, 0.72, 0.70, 'Thalamo-Cortical, Arousal');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (30, 'Suprachiasmatic Nucleus', 'SCN', 'Master circadian pacemaker in hypothalamus', 'Regulates circadian rhythms; receives input from retina', 200.0, 310.0, 0.80, 0.55, 'Circadian, Hypothalamus');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (31, 'Paraventricular Nucleus', 'PVN', 'Neuroendocrine nucleus in hypothalamus', 'Regulates stress response via HPA axis; oxytocin and vasopressin production', 195.0, 308.0, 0.75, 0.70, 'HPA Axis, Stress, Endocrine');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (32, 'Ventromedial Hypothalamus', 'VMH', 'Hypothalamic nucleus for energy regulation', 'Satiety and energy balance; sexual behavior and aggression', 205.0, 312.0, 0.70, 0.65, 'Hypothalamus, Homeostatic');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (33, 'Lateral Hypothalamus', 'LH', 'Lateral region of hypothalamus', 'Feeding behavior and reward; part of pleasure center', 185.0, 310.0, 0.68, 0.75, 'Hypothalamus, Reward, Feeding');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (34, 'Mammillary Bodies', 'MB', 'Part of Papez circuit in hypothalamus', 'Memory processing; part of limbic system for spatial and episodic memory', 200.0, 318.0, 0.64, 0.78, 'Limbic System, Memory');
 
--- Insula connections (interoception and self-awareness)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(5, 6, 0.65, 0.65, 'EXCITATORY', true, 'Insula-DMN for self-awareness and introspection'),
-(5, 7, 0.60, 0.60, 'EXCITATORY', true, 'Insula receives sensory signals from thalamus');
+-- FOREBRAIN - Telencephalon (Basal Ganglia)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (35, 'Putamen', 'PUT', 'Part of the dorsal striatum', 'Motor control and motor learning; habit formation', 230.0, 270.0, 0.65, 0.70, 'Basal Ganglia, Motor');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (36, 'Caudate Nucleus', 'CD', 'Part of the dorsal striatum', 'Goal-directed action, motor control, and learning', 220.0, 265.0, 0.67, 0.72, 'Basal Ganglia, Cognitive');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (37, 'Nucleus Accumbens', 'NAcc', 'Part of ventral striatum, reward center', 'Reward, pleasure, motivation, and addiction. Key target of dopamine release', 210.0, 300.0, 0.70, 0.88, 'Reward System, Limbic');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (38, 'Globus Pallidus', 'GP', 'Basal ganglia output structure', 'Motor control via inhibition of thalamus; regulates movement initiation', 225.0, 275.0, 0.62, 0.60, 'Basal Ganglia, Motor');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (39, 'Subthalamic Nucleus', 'STN', 'Small nucleus in basal ganglia', 'Motor control; target for deep brain stimulation in Parkinsons disease', 215.0, 295.0, 0.68, 0.65, 'Basal Ganglia, Motor');
 
--- DMN connections (self-referential thinking)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(6, 9, 0.80, 0.80, 'EXCITATORY', true, 'Core DMN connection between hub and PCC'),
-(6, 7, 0.50, 0.50, 'MODULATORY', true, 'DMN-thalamus connection modulated during consciousness shifts');
+-- FOREBRAIN - Telencephalon (Basal Forebrain)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (40, 'Nucleus Basalis', 'NB', 'Major cholinergic nucleus in basal forebrain', 'Primary source of acetylcholine to cortex; critical for attention and learning', 190.0, 305.0, 0.72, 0.80, 'Cholinergic System, Attention');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (41, 'Septal Nuclei', 'SEP', 'Part of limbic system in basal forebrain', 'Reward, reinforcement, and spatial memory; modulates hippocampal function', 195.0, 300.0, 0.65, 0.75, 'Limbic System, Memory');
 
--- VTA connections (reward and motivation)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(8, 1, 0.70, 0.70, 'MODULATORY', true, 'VTA provides dopaminergic input to PFC for motivation'),
-(8, 3, 0.60, 0.60, 'MODULATORY', true, 'VTA-hippocampus for reward-based memory consolidation');
+-- FOREBRAIN - Telencephalon (Hippocampal Formation)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (42, 'Dentate Gyrus', 'DG', 'Part of hippocampal formation', 'Neurogenesis site; pattern separation in memory formation', 175.0, 325.0, 0.60, 0.95, 'Hippocampal Formation, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (43, 'CA1 Hippocampus', 'CA1', 'Subfield of hippocampus proper', 'Memory consolidation and retrieval; vulnerable to stress', 178.0, 322.0, 0.63, 0.90, 'Hippocampal Formation, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (44, 'CA3 Hippocampus', 'CA3', 'Subfield of hippocampus proper', 'Pattern completion and associative memory; recurrent connections', 182.0, 318.0, 0.64, 0.92, 'Hippocampal Formation, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (45, 'Entorhinal Cortex', 'EC', 'Gateway to hippocampus', 'Spatial memory and navigation; grid cells for spatial representation', 170.0, 330.0, 0.66, 0.85, 'Hippocampal Formation, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (46, 'Parahippocampal Cortex', 'PHC', 'Cortex surrounding hippocampus', 'Scene and context memory; place recognition', 165.0, 335.0, 0.64, 0.80, 'Hippocampal Formation, Memory');
 
--- Visual cortex connections (perception)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(10, 7, 0.85, 0.85, 'EXCITATORY', true, 'Thalamus relays visual information to V1'),
-(10, 6, 0.45, 0.45, 'MODULATORY', true, 'Visual cortex-DMN connection altered in psychedelic states');
+-- FOREBRAIN - Telencephalon (Amygdala Complex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (47, 'Basolateral Amygdala', 'BLA', 'Main input station of amygdala', 'Emotional learning and fear conditioning; cortical-like structure', 105.0, 285.0, 0.74, 0.88, 'Limbic System, Emotional');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (48, 'Central Amygdala', 'CeA', 'Output station of amygdala', 'Orchestrates fear and stress responses; autonomic and behavioral outputs', 108.0, 282.0, 0.76, 0.82, 'Limbic System, Autonomic');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (49, 'Bed Nucleus of Stria Terminalis', 'BNST', 'Extended amygdala structure', 'Sustained anxiety and stress; distinct from fear (amygdala proper)', 110.0, 295.0, 0.70, 0.80, 'Extended Amygdala, Anxiety');
 
--- PCC connections (memory and consciousness)
-INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES
-(9, 1, 0.55, 0.55, 'MODULATORY', true, 'PCC-PFC connection for integrating memory with decision-making'),
-(9, 7, 0.60, 0.60, 'EXCITATORY', true, 'PCC-thalamus connection for conscious awareness');
+-- FOREBRAIN - Telencephalon (Insula)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (50, 'Anterior Insula', 'AI', 'Front part of insular cortex', 'Interoception, emotional awareness, and empathy. Key for psychedelic emotional effects', 120.0, 220.0, 0.72, 0.85, 'Salience Network, Interoception');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (51, 'Posterior Insula', 'PI', 'Back part of insular cortex', 'Primary interoceptive cortex; body state representation', 115.0, 230.0, 0.70, 0.75, 'Salience Network, Interoception');
 
--- Reset sequence for IDs
-ALTER SEQUENCE brain_regions_id_seq RESTART WITH 11;
-ALTER SEQUENCE neural_connections_id_seq RESTART WITH 100;
+-- FOREBRAIN - Telencephalon (Cingulate Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (52, 'Anterior Cingulate Cortex', 'ACC', 'Front part of cingulate cortex', 'Conflict monitoring, error detection, and emotion regulation', 200.0, 120.0, 0.73, 0.82, 'Salience Network, Executive');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (53, 'Subgenual Anterior Cingulate', 'sgACC', 'Ventral part of ACC (Brodmann area 25)', 'Depression and negative affect; target for depression treatments', 200.0, 130.0, 0.75, 0.90, 'Default Mode Network, Emotional');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (54, 'Retrosplenial Cortex', 'RSC', 'Posterior cingulate transition zone', 'Episodic memory, navigation, and scene processing', 155.0, 145.0, 0.67, 0.82, 'Default Mode Network, Memory');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (55, 'Precuneus', 'PCUN', 'Medial parietal cortex, part of DMN', 'Self-referential processing, episodic memory, and consciousness. Core DMN hub', 200.0, 160.0, 0.69, 0.83, 'Default Mode Network');
+
+-- FOREBRAIN - Telencephalon (Prefrontal Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (56, 'Dorsolateral Prefrontal Cortex', 'dlPFC', 'Lateral part of PFC (BA 9, 46)', 'Working memory, cognitive control, and executive function', 250.0, 90.0, 0.71, 0.80, 'Executive Network, Cognitive');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (57, 'Ventromedial Prefrontal Cortex', 'vmPFC', 'Medial ventral PFC (BA 10, 11)', 'Value-based decision making and emotion regulation', 200.0, 90.0, 0.68, 0.85, 'Default Mode Network, Decision Making');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (58, 'Orbitofrontal Cortex', 'OFC', 'Orbital surface of frontal lobe', 'Reward processing, decision making, and impulse control', 205.0, 95.0, 0.70, 0.82, 'Reward System, Decision Making');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (59, 'Ventrolateral Prefrontal Cortex', 'vlPFC', 'Lateral ventral PFC (BA 44, 45, 47)', 'Response inhibition and emotion regulation', 240.0, 100.0, 0.69, 0.78, 'Executive Network, Inhibition');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (60, 'Dorsomedial Prefrontal Cortex', 'dmPFC', 'Medial dorsal PFC (BA 8, 9)', 'Social cognition, mentalizing, and self-reference', 200.0, 85.0, 0.70, 0.84, 'Default Mode Network, Social');
+
+-- FOREBRAIN - Telencephalon (Motor Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (61, 'Primary Motor Cortex', 'M1', 'Precentral gyrus (BA 4)', 'Voluntary motor control; sends commands to spinal cord', 260.0, 140.0, 0.78, 0.75, 'Motor Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (62, 'Premotor Cortex', 'PMC', 'Anterior to M1 (BA 6)', 'Motor planning and preparation; sensorimotor integration', 265.0, 130.0, 0.72, 0.78, 'Motor Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (63, 'Supplementary Motor Area', 'SMA', 'Medial BA 6', 'Complex motor sequences and bimanual coordination', 200.0, 110.0, 0.70, 0.80, 'Motor Network');
+
+-- FOREBRAIN - Telencephalon (Somatosensory Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (64, 'Primary Somatosensory Cortex', 'S1', 'Postcentral gyrus (BA 1, 2, 3)', 'Tactile and proprioceptive sensations from body', 270.0, 160.0, 0.76, 0.72, 'Somatosensory Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (65, 'Secondary Somatosensory Cortex', 'S2', 'Superior bank of Sylvian fissure', 'Higher-order tactile processing; bilateral representation', 265.0, 170.0, 0.70, 0.70, 'Somatosensory Network');
+
+-- FOREBRAIN - Telencephalon (Parietal Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (66, 'Posterior Parietal Cortex', 'PPC', 'BA 5, 7, 39, 40', 'Spatial attention, visuomotor integration, and action planning', 285.0, 175.0, 0.68, 0.76, 'Dorsal Attention Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (67, 'Inferior Parietal Lobule', 'IPL', 'BA 39, 40', 'Language, mathematical cognition, and body image', 290.0, 180.0, 0.67, 0.75, 'Frontoparietal Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (68, 'Superior Parietal Lobule', 'SPL', 'BA 5, 7', 'Spatial processing and visuomotor coordination', 280.0, 165.0, 0.66, 0.74, 'Dorsal Attention Network');
+
+-- FOREBRAIN - Telencephalon (Temporal Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (69, 'Superior Temporal Gyrus', 'STG', 'Includes auditory cortex (BA 22, 41, 42)', 'Auditory processing and language comprehension', 90.0, 250.0, 0.74, 0.70, 'Auditory Network, Language');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (70, 'Middle Temporal Gyrus', 'MTG', 'BA 21, 37', 'Semantic memory and language processing', 85.0, 260.0, 0.68, 0.72, 'Language, Semantic Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (71, 'Inferior Temporal Gyrus', 'ITG', 'BA 20', 'Object recognition and face processing', 80.0, 270.0, 0.70, 0.74, 'Ventral Visual Stream');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (72, 'Fusiform Gyrus', 'FG', 'BA 37', 'Face and body recognition; visual word form area', 75.0, 280.0, 0.72, 0.76, 'Ventral Visual Stream');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (73, 'Temporal Pole', 'TP', 'BA 38', 'Social and emotional processing; semantic memory', 70.0, 240.0, 0.65, 0.78, 'Social Brain, Semantic');
+
+-- FOREBRAIN - Telencephalon (Occipital/Visual Cortex)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (74, 'V2 Visual Cortex', 'V2', 'Secondary visual cortex (BA 18)', 'Basic visual features and contour processing', 48.0, 205.0, 0.76, 0.68, 'Visual Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (75, 'V3 Visual Cortex', 'V3', 'Third visual area', 'Dynamic form perception and depth', 45.0, 210.0, 0.74, 0.66, 'Visual Network');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (76, 'V4 Visual Cortex', 'V4', 'Fourth visual area', 'Color processing and shape recognition', 52.0, 208.0, 0.75, 0.67, 'Visual Network, Ventral Stream');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (77, 'V5/MT Visual Cortex', 'V5', 'Middle temporal visual area', 'Motion processing and visual guidance of movement', 55.0, 215.0, 0.77, 0.65, 'Visual Network, Dorsal Stream');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (78, 'Cuneus', 'CUN', 'Medial occipital cortex', 'Visual processing of the contralateral lower visual field', 200.0, 190.0, 0.73, 0.68, 'Visual Network');
+
+-- FOREBRAIN - Telencephalon (Other Cortical Regions)
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (79, 'Claustrum', 'CLA', 'Thin sheet of gray matter', 'Consciousness and multisensory integration; connects widely to cortex', 150.0, 220.0, 0.68, 0.82, 'Consciousness, Integration');
+INSERT INTO brain_regions (id, name, code, description, function_description, positionx, positiony, baseline_activity, neuroplasticity_potential, network) VALUES (80, 'Piriform Cortex', 'PIR', 'Primary olfactory cortex', 'Odor identification and olfactory memory', 130.0, 295.0, 0.64, 0.72, 'Olfactory System');
+
+-- =====================================================
+-- NEURAL CONNECTIONS
+-- =====================================================
+-- Keep original connections for first 10 regions
+-- These provide baseline functionality while we expand
+
+-- DMN Internal Connections (critical for ego dissolution)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (1, 2, 0.80, 0.80, 'EXCITATORY', true, 'Core DMN: mPFC-PCC connection, weakens during psychedelic states causing ego dissolution');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (1, 3, 0.70, 0.70, 'EXCITATORY', true, 'mPFC-Anterior Hippocampus for self-referential memory integration');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (2, 3, 0.75, 0.75, 'EXCITATORY', true, 'PCC-Anterior Hippocampus for episodic memory retrieval and personal narrative');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (2, 10, 0.60, 0.60, 'MODULATORY', true, 'PCC-Cerebellum DMN connectivity, altered in psychedelic states');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (1, 8, 0.55, 0.55, 'MODULATORY', true, 'mPFC-Anteromedial Caudate for motivation and goal-directed behavior');
+
+-- DMN-to-Sensory Connections (increased in psychedelic states)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (2, 5, 0.40, 0.40, 'MODULATORY', true, 'PCC-Visual Cortex: low baseline, dramatically increases during psychedelic experiences');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (1, 6, 0.35, 0.35, 'MODULATORY', true, 'mPFC-Auditory Cortex: weak baseline, enhanced during altered states');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (3, 5, 0.30, 0.30, 'MODULATORY', true, 'Hippocampus-Visual Cortex for visual memory encoding');
+
+-- Limbic-DMN Connections (emotion-self interface)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (1, 4, 0.65, 0.65, 'INHIBITORY', true, 'mPFC normally inhibits amygdala; this connection weakens under psychedelics');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (4, 3, 0.78, 0.78, 'EXCITATORY', true, 'Amygdala-Anterior Hippocampus for emotional memory consolidation');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (4, 2, 0.50, 0.50, 'EXCITATORY', true, 'Amygdala-PCC connection for emotional context in autobiographical memory');
+
+-- Sensory Network Internal Connections (enhanced integration)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (5, 6, 0.55, 0.55, 'EXCITATORY', true, 'Visual-Auditory cross-modal integration, enhanced in psychedelic states (synesthesia)');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (5, 7, 0.85, 0.85, 'EXCITATORY', true, 'Thalamus-Visual Cortex primary visual relay pathway');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (6, 7, 0.82, 0.82, 'EXCITATORY', true, 'Thalamus-Auditory Cortex primary auditory relay pathway');
+
+-- Thalamic Gating and Desynchronization
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (7, 4, 0.75, 0.75, 'EXCITATORY', true, 'Thalamus-Amygdala for rapid sensory-emotional integration');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (7, 9, 0.68, 0.68, 'EXCITATORY', true, 'Thalamus-Frontoparietal for attention gating and control');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (7, 10, 0.65, 0.65, 'MODULATORY', true, 'Thalamus-Cerebellum for sensorimotor coordination');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (7, 1, 0.60, 0.60, 'MODULATORY', true, 'Thalamus-mPFC for conscious awareness, desynchronizes under psychedelics');
+
+-- Frontoparietal Network Connections (attention control)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (9, 1, 0.70, 0.70, 'EXCITATORY', true, 'Frontoparietal-mPFC for executive attention and cognitive control');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (9, 4, 0.62, 0.62, 'MODULATORY', true, 'Frontoparietal-Amygdala for emotion regulation and attention to emotional stimuli');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (9, 5, 0.58, 0.58, 'EXCITATORY', true, 'Frontoparietal-Visual Cortex for top-down attention control of perception');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (9, 6, 0.55, 0.55, 'EXCITATORY', true, 'Frontoparietal-Auditory Cortex for auditory attention and processing');
+
+-- Subcortical Integration (motivation and motor)
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (8, 3, 0.64, 0.64, 'MODULATORY', true, 'Anteromedial Caudate-Hippocampus for motivation-memory interactions');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (8, 2, 0.58, 0.58, 'MODULATORY', true, 'Anteromedial Caudate-PCC for goal-directed DMN modulation');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (10, 3, 0.52, 0.52, 'EXCITATORY', true, 'Cerebellum-Hippocampus for procedural and spatial memory integration');
+INSERT INTO neural_connections (source_region_id, target_region_id, weight, baseline_weight, connection_type, is_bidirectional, description) VALUES (10, 9, 0.50, 0.50, 'EXCITATORY', true, 'Cerebellum-Frontoparietal for cognitive and motor coordination');

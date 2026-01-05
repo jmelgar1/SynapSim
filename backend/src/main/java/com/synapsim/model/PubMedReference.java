@@ -38,6 +38,9 @@ public class PubMedReference {
     @Column(columnDefinition = "TEXT")
     private String abstractText;
 
+    @Column(columnDefinition = "TEXT")
+    private String fullText;
+
     @Column(name = "article_url")
     private String articleUrl;
 

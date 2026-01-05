@@ -7,8 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import reactor.core.publisher.Mono;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -49,33 +56,48 @@ public class PubMedService {
     }
 
     /**
-     * Search PubMed for articles based on keywords
+     * Search PubMed and PMC for articles based on keywords
      *
      * @param keywords List of search keywords
-     * @return List of PubMed article DTOs
+     * @return List of PubMed article DTOs (combined from both sources)
      */
     public List<PubMedArticleDTO> searchArticles(List<String> keywords) {
         try {
-            log.info("Searching PubMed with keywords: {}", keywords);
+            log.info("Searching PubMed and PMC with keywords: {}", keywords);
 
-            // Step 1: Search for article IDs
-            List<String> articleIds = searchArticleIds(keywords);
-
-            if (articleIds.isEmpty()) {
-                log.warn("No articles found for keywords: {}", keywords);
-                return new ArrayList<>();
-            }
-
-            log.info("Found {} article IDs", articleIds.size());
-
-            // Step 2: Build keyword weights for relevance scoring
+            // Build keyword weights for relevance scoring
             Map<String, Double> keywordWeights = buildKeywordWeights(keywords);
 
-            // Step 3: Fetch article details with relevance scoring
-            return fetchArticleDetails(articleIds, keywords, keywordWeights);
+            // Step 1: Search PubMed for article IDs
+            List<String> pubmedIds = searchArticleIds(keywords);
+            log.info("Found {} article IDs from PubMed", pubmedIds.size());
+
+            // Step 2: Search PMC for open access article IDs
+            List<String> pmcIds = searchPMCArticleIds(keywords);
+            log.info("Found {} article IDs from PMC", pmcIds.size());
+
+            // Step 3: Fetch detailed information from PubMed
+            List<PubMedArticleDTO> pubmedArticles = new ArrayList<>();
+            if (!pubmedIds.isEmpty()) {
+                pubmedArticles = fetchArticleDetails(pubmedIds, keywords, keywordWeights);
+                log.info("Fetched {} articles from PubMed with details", pubmedArticles.size());
+            }
+
+            // Step 4: Fetch detailed information from PMC (with full text)
+            List<PubMedArticleDTO> pmcArticles = new ArrayList<>();
+            if (!pmcIds.isEmpty()) {
+                pmcArticles = fetchPMCArticleDetails(pmcIds, keywords, keywordWeights);
+                log.info("Fetched {} articles from PMC with full text", pmcArticles.size());
+            }
+
+            // Step 5: Combine results, avoiding duplicates
+            List<PubMedArticleDTO> combinedArticles = combineArticles(pubmedArticles, pmcArticles);
+            log.info("Successfully combined {} unique articles", combinedArticles.size());
+
+            return combinedArticles;
 
         } catch (Exception e) {
-            log.error("Error searching PubMed: {}", e.getMessage(), e);
+            log.error("Error searching PubMed/PMC: {}", e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -122,17 +144,18 @@ public class PubMedService {
     }
 
     /**
-     * Fetch article details by IDs
+     * Fetch article details by IDs including full abstracts
      */
     private List<PubMedArticleDTO> fetchArticleDetails(List<String> articleIds, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         try {
             // Join IDs with commas
             String ids = String.join(",", articleIds);
 
-            String url = String.format("%s/esummary.fcgi?db=pubmed&id=%s&retmode=json",
+            // Use efetch instead of esummary to get full abstracts
+            String url = String.format("%s/efetch.fcgi?db=pubmed&id=%s&retmode=xml",
                     pubmedBaseUrl, ids);
 
-            log.debug("PubMed summary URL: {}", url);
+            log.debug("PubMed fetch URL: {}", url);
 
             // Make API call
             String response = webClient.get()
@@ -145,8 +168,16 @@ public class PubMedService {
                 return new ArrayList<>();
             }
 
-            // Parse JSON response with relevance scoring
-            return parseArticleSummaries(response, articleIds, searchKeywords, keywordWeights);
+            // Parse XML response with relevance scoring
+            List<PubMedArticleDTO> articles = parseArticleXml(response, searchKeywords, keywordWeights);
+
+            // Attempt to fetch full text from PMC for each article
+            for (PubMedArticleDTO article : articles) {
+                String fullText = fetchFullTextFromPMC(article.getPubmedId());
+                article.setFullText(fullText);
+            }
+
+            return articles;
 
         } catch (Exception e) {
             log.error("Error fetching article details: {}", e.getMessage(), e);
@@ -155,60 +186,151 @@ public class PubMedService {
     }
 
     /**
-     * Parse article summaries from PubMed API response
+     * Parse article details from PubMed XML response including abstracts
      */
-    private List<PubMedArticleDTO> parseArticleSummaries(String response, List<String> articleIds, List<String> searchKeywords, Map<String, Double> keywordWeights) {
+    private List<PubMedArticleDTO> parseArticleXml(String xmlResponse, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         List<PubMedArticleDTO> articles = new ArrayList<>();
 
         try {
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode result = root.path("result");
+            // Parse XML
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes()));
+            doc.getDocumentElement().normalize();
 
-            for (String id : articleIds) {
-                JsonNode article = result.path(id);
+            // Get all PubmedArticle elements
+            NodeList articleNodes = doc.getElementsByTagName("PubmedArticle");
 
-                if (article.isMissingNode()) {
-                    continue;
-                }
+            for (int i = 0; i < articleNodes.getLength(); i++) {
+                Element articleElement = (Element) articleNodes.item(i);
 
-                // Extract article information
-                String title = article.path("title").asText("");
-                String pubDate = article.path("pubdate").asText("");
+                // Extract PubMed ID
+                String pubmedId = getTextContent(articleElement, "PMID");
+
+                // Extract title
+                String title = getTextContent(articleElement, "ArticleTitle");
+
+                // Extract abstract - combine all AbstractText elements
+                String abstractText = extractAbstract(articleElement);
+
+                // Extract publication date
+                String pubDate = extractPublicationDate(articleElement);
 
                 // Extract authors
-                JsonNode authorsNode = article.path("authors");
-                String authors = "";
-                if (authorsNode.isArray()) {
-                    List<String> authorNames = new ArrayList<>();
-                    authorsNode.forEach(author -> {
-                        authorNames.add(author.path("name").asText());
-                    });
-                    authors = String.join(", ", authorNames);
-                }
+                String authors = extractAuthors(articleElement);
 
-                // Build article DTO with calculated relevance score
+                // Build article DTO
                 PubMedArticleDTO dto = PubMedArticleDTO.builder()
-                        .pubmedId(id)
+                        .pubmedId(pubmedId)
                         .title(title)
                         .authors(authors)
                         .publicationDate(pubDate)
-                        .articleUrl("https://pubmed.ncbi.nlm.nih.gov/" + id + "/")
+                        .abstractText(abstractText)
+                        .articleUrl("https://pubmed.ncbi.nlm.nih.gov/" + pubmedId + "/")
+                        .keywords(String.join(", ", searchKeywords))
                         .build();
 
-                // Calculate relevance score based on title
+                // Calculate relevance score based on abstract content
                 double relevance = calculateRelevanceScore(dto, searchKeywords, keywordWeights);
                 dto.setRelevanceScore(relevance);
 
                 articles.add(dto);
 
-                log.debug("Article: {} | Relevance: {}", title, relevance);
+                log.debug("Article: {} | Abstract length: {} | Relevance: {}",
+                        title, abstractText != null ? abstractText.length() : 0, relevance);
             }
 
         } catch (Exception e) {
-            log.error("Error parsing article summaries: {}", e.getMessage(), e);
+            log.error("Error parsing article XML: {}", e.getMessage(), e);
         }
 
         return articles;
+    }
+
+    /**
+     * Extract text content from XML element by tag name
+     */
+    private String getTextContent(Element parent, String tagName) {
+        NodeList nodeList = parent.getElementsByTagName(tagName);
+        if (nodeList.getLength() > 0) {
+            Node node = nodeList.item(0);
+            return node.getTextContent();
+        }
+        return "";
+    }
+
+    /**
+     * Extract abstract text from article element
+     * Abstracts can have multiple AbstractText elements (structured abstracts)
+     */
+    private String extractAbstract(Element articleElement) {
+        NodeList abstractNodes = articleElement.getElementsByTagName("AbstractText");
+        if (abstractNodes.getLength() == 0) {
+            return "";
+        }
+
+        StringBuilder abstractBuilder = new StringBuilder();
+        for (int i = 0; i < abstractNodes.getLength(); i++) {
+            Element abstractTextElement = (Element) abstractNodes.item(i);
+
+            // Some abstracts have labels (BACKGROUND, METHODS, etc.)
+            String label = abstractTextElement.getAttribute("Label");
+            if (label != null && !label.isEmpty()) {
+                abstractBuilder.append(label).append(": ");
+            }
+
+            abstractBuilder.append(abstractTextElement.getTextContent());
+
+            if (i < abstractNodes.getLength() - 1) {
+                abstractBuilder.append(" ");
+            }
+        }
+
+        return abstractBuilder.toString();
+    }
+
+    /**
+     * Extract publication date from article element
+     */
+    private String extractPublicationDate(Element articleElement) {
+        NodeList pubDateNodes = articleElement.getElementsByTagName("PubDate");
+        if (pubDateNodes.getLength() > 0) {
+            Element pubDateElement = (Element) pubDateNodes.item(0);
+
+            String year = getTextContent(pubDateElement, "Year");
+            String month = getTextContent(pubDateElement, "Month");
+
+            if (!year.isEmpty()) {
+                return month.isEmpty() ? year : month + " " + year;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Extract authors from article element
+     */
+    private String extractAuthors(Element articleElement) {
+        NodeList authorNodes = articleElement.getElementsByTagName("Author");
+        List<String> authorNames = new ArrayList<>();
+
+        for (int i = 0; i < Math.min(authorNodes.getLength(), 3); i++) { // Limit to first 3 authors
+            Element authorElement = (Element) authorNodes.item(i);
+
+            String lastName = getTextContent(authorElement, "LastName");
+            String foreName = getTextContent(authorElement, "ForeName");
+
+            if (!lastName.isEmpty()) {
+                String fullName = foreName.isEmpty() ? lastName : lastName + " " + foreName.charAt(0);
+                authorNames.add(fullName);
+            }
+        }
+
+        if (authorNodes.getLength() > 3) {
+            authorNames.add("et al");
+        }
+
+        return String.join(", ", authorNames);
     }
 
     /**
@@ -221,10 +343,9 @@ public class PubMedService {
         keywords.add(compoundType);
         keywords.add("neuroplasticity");
 
-        // Add brain region if specified
-        if (brainRegion != null && !brainRegion.isEmpty()) {
-            keywords.add(brainRegion.replace("-", " "));
-        }
+        // NOTE: Brain region excluded from keywords to broaden search results
+        // The specific brain region is still used in the simulation logic,
+        // but not in PubMed searches to avoid overly narrow results
 
         // Add setting-related keywords
         if (therapeuticSetting != null && !therapeuticSetting.isEmpty()) {
@@ -240,7 +361,7 @@ public class PubMedService {
         keywords.add("brain");
         keywords.add("connectivity");
 
-        log.debug("Generated keywords: {}", keywords);
+        log.debug("Generated keywords (brain region excluded): {}", keywords);
         return keywords;
     }
 
@@ -260,6 +381,439 @@ public class PubMedService {
         } catch (Exception e) {
             log.error("PubMed API test FAILED: {}", e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Search PMC for open access article IDs
+     */
+    private List<String> searchPMCArticleIds(List<String> keywords) {
+        try {
+            // Build search query
+            String query = String.join("+", keywords);
+
+            // Search PMC database for open access articles
+            String url = String.format("%s/esearch.fcgi?db=pmc&term=%s&retmode=json&retmax=%d",
+                    pubmedBaseUrl, query, maxResults);
+
+            log.debug("PMC search URL: {}", url);
+
+            String response = webClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null) {
+                return new ArrayList<>();
+            }
+
+            // Parse JSON response
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode idList = root.path("esearchresult").path("idlist");
+
+            List<String> pmcIds = new ArrayList<>();
+            if (idList.isArray()) {
+                for (JsonNode idNode : idList) {
+                    pmcIds.add(idNode.asText());
+                }
+            }
+
+            log.info("Found {} PMC article IDs", pmcIds.size());
+            return pmcIds;
+
+        } catch (Exception e) {
+            log.error("Error searching PMC: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Fetch article details from PMC with full text
+     */
+    private List<PubMedArticleDTO> fetchPMCArticleDetails(
+            List<String> pmcIds,
+            List<String> searchKeywords,
+            Map<String, Double> keywordWeights
+    ) {
+        try {
+            List<PubMedArticleDTO> articles = new ArrayList<>();
+
+            // Fetch each PMC article individually to get full text
+            for (String pmcId : pmcIds) {
+                PubMedArticleDTO article = fetchSinglePMCArticle(pmcId, searchKeywords, keywordWeights);
+                if (article != null) {
+                    articles.add(article);
+                }
+            }
+
+            return articles;
+
+        } catch (Exception e) {
+            log.error("Error fetching PMC article details: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Fetch a single PMC article with full text
+     */
+    private PubMedArticleDTO fetchSinglePMCArticle(
+            String pmcId,
+            List<String> searchKeywords,
+            Map<String, Double> keywordWeights
+    ) {
+        try {
+            // Fetch full XML from PMC
+            String url = String.format("%s/efetch.fcgi?db=pmc&id=%s&retmode=xml",
+                    pubmedBaseUrl, pmcId);
+
+            log.debug("Fetching PMC article: {}", pmcId);
+
+            String response = webClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null || response.isEmpty()) {
+                log.debug("No response for PMC ID: {}", pmcId);
+                return null;
+            }
+
+            // Parse PMC XML to extract article details and full text
+            return parsePMCArticleXml(response, pmcId, searchKeywords, keywordWeights);
+
+        } catch (Exception e) {
+            log.warn("Error fetching PMC article {}: {}", pmcId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Parse PMC XML response to extract article details including full text
+     */
+    private PubMedArticleDTO parsePMCArticleXml(
+            String xmlResponse,
+            String pmcId,
+            List<String> searchKeywords,
+            Map<String, Double> keywordWeights
+    ) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes()));
+            doc.getDocumentElement().normalize();
+
+            // Extract PubMed ID if available
+            String pubmedId = pmcId; // Default to PMC ID
+            NodeList pmidNodes = doc.getElementsByTagName("article-id");
+            for (int i = 0; i < pmidNodes.getLength(); i++) {
+                Element pmidElement = (Element) pmidNodes.item(i);
+                if ("pmid".equals(pmidElement.getAttribute("pub-id-type"))) {
+                    pubmedId = pmidElement.getTextContent().trim();
+                    break;
+                }
+            }
+
+            // Extract title
+            String title = "";
+            NodeList titleNodes = doc.getElementsByTagName("article-title");
+            if (titleNodes.getLength() > 0) {
+                title = titleNodes.item(0).getTextContent().trim();
+            }
+
+            // Extract authors
+            StringBuilder authors = new StringBuilder();
+            NodeList contribNodes = doc.getElementsByTagName("contrib");
+            int authorCount = 0;
+            for (int i = 0; i < contribNodes.getLength() && authorCount < 3; i++) {
+                Element contrib = (Element) contribNodes.item(i);
+                if ("author".equals(contrib.getAttribute("contrib-type"))) {
+                    NodeList surnameNodes = contrib.getElementsByTagName("surname");
+                    NodeList givenNamesNodes = contrib.getElementsByTagName("given-names");
+
+                    if (surnameNodes.getLength() > 0) {
+                        if (authors.length() > 0) authors.append(", ");
+                        if (givenNamesNodes.getLength() > 0) {
+                            authors.append(givenNamesNodes.item(0).getTextContent().trim()).append(" ");
+                        }
+                        authors.append(surnameNodes.item(0).getTextContent().trim());
+                        authorCount++;
+                    }
+                }
+            }
+            if (authorCount < contribNodes.getLength()) {
+                authors.append(" et al.");
+            }
+
+            // Extract publication date
+            String publicationDate = "";
+            NodeList pubDateNodes = doc.getElementsByTagName("pub-date");
+            if (pubDateNodes.getLength() > 0) {
+                Element pubDate = (Element) pubDateNodes.item(0);
+                NodeList monthNodes = pubDate.getElementsByTagName("month");
+                NodeList yearNodes = pubDate.getElementsByTagName("year");
+
+                if (monthNodes.getLength() > 0 && yearNodes.getLength() > 0) {
+                    String monthNum = monthNodes.item(0).getTextContent().trim();
+                    String year = yearNodes.item(0).getTextContent().trim();
+                    // Convert month number to name
+                    String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+                    String month = monthNum;
+                    try {
+                        int monthIndex = Integer.parseInt(monthNum) - 1;
+                        if (monthIndex >= 0 && monthIndex < 12) {
+                            month = monthNames[monthIndex];
+                        }
+                    } catch (NumberFormatException e) {
+                        // Keep month as is if it's not a number
+                    }
+                    publicationDate = month + " " + year;
+                } else if (yearNodes.getLength() > 0) {
+                    publicationDate = yearNodes.item(0).getTextContent().trim();
+                }
+            }
+
+            // Extract abstract
+            String abstractText = "";
+            NodeList abstractNodes = doc.getElementsByTagName("abstract");
+            if (abstractNodes.getLength() > 0) {
+                abstractText = abstractNodes.item(0).getTextContent().trim();
+            }
+
+            // Extract full text body
+            String fullText = parseFullTextXml(xmlResponse);
+
+            // Build article URL (use PubMed URL if we have PMID, otherwise PMC URL)
+            String articleUrl = pubmedId.equals(pmcId)
+                    ? String.format("https://www.ncbi.nlm.nih.gov/pmc/articles/PMC%s/", pmcId)
+                    : String.format("https://pubmed.ncbi.nlm.nih.gov/%s/", pubmedId);
+
+            // Build temporary article to calculate relevance score
+            PubMedArticleDTO tempArticle = PubMedArticleDTO.builder()
+                    .pubmedId(pubmedId)
+                    .title(title)
+                    .authors(authors.toString())
+                    .publicationDate(publicationDate)
+                    .abstractText(abstractText)
+                    .fullText(fullText)
+                    .articleUrl(articleUrl)
+                    .keywords(String.join(", ", searchKeywords))
+                    .build();
+
+            // Calculate relevance score
+            double relevanceScore = calculateRelevanceScore(tempArticle, searchKeywords, keywordWeights);
+
+            return PubMedArticleDTO.builder()
+                    .pubmedId(pubmedId)
+                    .title(title)
+                    .authors(authors.toString())
+                    .publicationDate(publicationDate)
+                    .abstractText(abstractText)
+                    .fullText(fullText)
+                    .articleUrl(articleUrl)
+                    .relevanceScore(relevanceScore)
+                    .keywords(String.join(", ", searchKeywords))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error parsing PMC XML for article {}: {}", pmcId, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Combine articles from PubMed and PMC, avoiding duplicates
+     * Prioritize PMC articles (with full text) over PubMed articles
+     */
+    private List<PubMedArticleDTO> combineArticles(
+            List<PubMedArticleDTO> pubmedArticles,
+            List<PubMedArticleDTO> pmcArticles
+    ) {
+        // Create a map of PMC articles by PubMed ID
+        Map<String, PubMedArticleDTO> pmcMap = pmcArticles.stream()
+                .collect(Collectors.toMap(
+                        PubMedArticleDTO::getPubmedId,
+                        article -> article,
+                        (existing, replacement) -> existing // Keep first if duplicate
+                ));
+
+        // Merge articles, prioritizing PMC versions (with full text)
+        Map<String, PubMedArticleDTO> combinedMap = new HashMap<>(pmcMap);
+
+        for (PubMedArticleDTO pubmedArticle : pubmedArticles) {
+            if (!combinedMap.containsKey(pubmedArticle.getPubmedId())) {
+                combinedMap.put(pubmedArticle.getPubmedId(), pubmedArticle);
+            }
+        }
+
+        // Convert to list and sort by relevance score
+        List<PubMedArticleDTO> combined = new ArrayList<>(combinedMap.values());
+        combined.sort((a, b) -> Double.compare(
+                b.getRelevanceScore() != null ? b.getRelevanceScore() : 0.0,
+                a.getRelevanceScore() != null ? a.getRelevanceScore() : 0.0
+        ));
+
+        // Limit to maxResults
+        if (combined.size() > maxResults) {
+            combined = combined.subList(0, maxResults);
+        }
+
+        return combined;
+    }
+
+    /**
+     * Fetch full text from PubMed Central if available
+     *
+     * @param pubmedId PubMed ID to fetch full text for
+     * @return Full text content if available in PMC, null otherwise
+     */
+    private String fetchFullTextFromPMC(String pubmedId) {
+        try {
+            log.debug("Attempting to fetch full text from PMC for PMID: {}", pubmedId);
+
+            // First, check if the article is available in PMC by looking for PMC ID
+            String pmcId = getPMCId(pubmedId);
+
+            if (pmcId == null) {
+                log.debug("No PMC ID found for PMID: {}", pubmedId);
+                return null;
+            }
+
+            log.debug("Found PMC ID {} for PMID: {}", pmcId, pubmedId);
+
+            // Fetch full text from PMC using efetch
+            String url = String.format("%s/efetch.fcgi?db=pmc&id=%s&retmode=xml",
+                    pubmedBaseUrl, pmcId);
+
+            log.debug("PMC fetch URL: {}", url);
+
+            String response = webClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null || response.isEmpty()) {
+                log.debug("No response from PMC for ID: {}", pmcId);
+                return null;
+            }
+
+            // Parse the XML to extract body text
+            String fullText = parseFullTextXml(response);
+
+            if (fullText != null && !fullText.isEmpty()) {
+                log.info("Successfully fetched full text from PMC for PMID: {} ({} characters)",
+                        pubmedId, fullText.length());
+                return fullText;
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            log.warn("Could not fetch full text from PMC for PMID {}: {}", pubmedId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get PMC ID from PubMed ID using elink
+     *
+     * @param pubmedId PubMed ID
+     * @return PMC ID if article is in PMC, null otherwise
+     */
+    private String getPMCId(String pubmedId) {
+        try {
+            // Use elink to find PMC ID from PubMed ID
+            String url = String.format("%s/elink.fcgi?dbfrom=pubmed&db=pmc&id=%s&retmode=json",
+                    pubmedBaseUrl, pubmedId);
+
+            String response = webClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null) {
+                return null;
+            }
+
+            // Parse JSON response to extract PMC ID
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode linksets = root.path("linksets");
+
+            if (linksets.isArray() && linksets.size() > 0) {
+                JsonNode linksetdb = linksets.get(0).path("linksetdbs");
+
+                if (linksetdb.isArray() && linksetdb.size() > 0) {
+                    JsonNode links = linksetdb.get(0).path("links");
+
+                    if (links.isArray() && links.size() > 0) {
+                        return links.get(0).asText();
+                    }
+                }
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Error getting PMC ID for PMID {}: {}", pubmedId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Parse full text XML from PMC to extract readable text
+     *
+     * @param xmlResponse XML response from PMC efetch
+     * @return Extracted full text content
+     */
+    private String parseFullTextXml(String xmlResponse) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xmlResponse.getBytes()));
+            doc.getDocumentElement().normalize();
+
+            StringBuilder fullText = new StringBuilder();
+
+            // Extract article body sections
+            NodeList bodyNodes = doc.getElementsByTagName("body");
+
+            if (bodyNodes.getLength() > 0) {
+                Element bodyElement = (Element) bodyNodes.item(0);
+
+                // Get all section elements
+                NodeList sections = bodyElement.getElementsByTagName("sec");
+
+                for (int i = 0; i < sections.getLength(); i++) {
+                    Element section = (Element) sections.item(i);
+
+                    // Extract section title
+                    NodeList titleNodes = section.getElementsByTagName("title");
+                    if (titleNodes.getLength() > 0) {
+                        String sectionTitle = titleNodes.item(0).getTextContent().trim();
+                        fullText.append("\n\n## ").append(sectionTitle).append("\n");
+                    }
+
+                    // Extract paragraphs in this section
+                    NodeList paragraphs = section.getElementsByTagName("p");
+                    for (int j = 0; j < paragraphs.getLength(); j++) {
+                        String paragraph = paragraphs.item(j).getTextContent().trim();
+                        if (!paragraph.isEmpty()) {
+                            fullText.append("\n").append(paragraph);
+                        }
+                    }
+                }
+            }
+
+            String result = fullText.toString().trim();
+            return result.isEmpty() ? null : result;
+
+        } catch (Exception e) {
+            log.error("Error parsing full text XML: {}", e.getMessage(), e);
+            return null;
         }
     }
 
@@ -303,7 +857,7 @@ public class PubMedService {
     }
 
     /**
-     * Calculate relevance score for an article based on keyword matches in the title
+     * Calculate relevance score for an article based on keyword matches in title AND abstract
      * Score is based on weighted keyword matching with bonuses for title prominence
      *
      * @param article The article to score
@@ -314,46 +868,69 @@ public class PubMedService {
     private double calculateRelevanceScore(PubMedArticleDTO article, List<String> searchKeywords, Map<String, Double> keywordWeights) {
         try {
             String title = article.getTitle().toLowerCase();
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+
             double baseScore = 0.0;
-            int matchedKeywords = 0;
+            int titleMatches = 0;
+            int abstractMatches = 0;
             int totalOccurrences = 0;
 
-            // Calculate base score from keyword matches
+            // Calculate base score from keyword matches in both title and abstract
             for (String keyword : searchKeywords) {
                 String normalizedKeyword = keyword.toLowerCase().trim();
 
+                // Check title matches (weighted higher)
                 if (title.contains(normalizedKeyword)) {
-                    matchedKeywords++;
+                    titleMatches++;
 
-                    // Add weight for this keyword
+                    // Title matches get full weight
                     double weight = keywordWeights.getOrDefault(normalizedKeyword, generalKeywordWeight);
                     baseScore += weight;
 
-                    // Count occurrences for frequency bonus
-                    int occurrences = countOccurrences(title, normalizedKeyword);
-                    totalOccurrences += occurrences;
+                    // Count occurrences in title
+                    int titleOccurrences = countOccurrences(title, normalizedKeyword);
+                    totalOccurrences += titleOccurrences;
+                }
+
+                // Check abstract matches (weighted lower than title but still important)
+                if (!abstractText.isEmpty() && abstractText.contains(normalizedKeyword)) {
+                    abstractMatches++;
+
+                    // Abstract matches get 70% of full weight
+                    double weight = keywordWeights.getOrDefault(normalizedKeyword, generalKeywordWeight);
+                    baseScore += weight * 0.7;
+
+                    // Count occurrences in abstract
+                    int abstractOccurrences = countOccurrences(abstractText, normalizedKeyword);
+                    totalOccurrences += abstractOccurrences;
                 }
             }
 
             // Apply bonuses
             double bonus = 0.0;
 
-            // Title match bonus: if keywords appear in title (which we're already searching)
-            if (matchedKeywords > 0) {
+            // Title match bonus: if keywords appear in title (high prominence)
+            if (titleMatches > 0) {
                 bonus += titleMatchBonus;
             }
 
+            // Abstract coverage bonus: reward articles where keywords appear in abstract
+            if (abstractMatches > 0) {
+                double abstractCoverage = (double) abstractMatches / searchKeywords.size();
+                bonus += abstractCoverage * 0.10; // Up to 0.10 bonus for full abstract coverage
+            }
+
             // Multiple occurrence bonus: keywords appearing multiple times indicate higher relevance
-            if (totalOccurrences > matchedKeywords) {
-                int extraOccurrences = totalOccurrences - matchedKeywords;
+            if (totalOccurrences > (titleMatches + abstractMatches)) {
+                int extraOccurrences = totalOccurrences - (titleMatches + abstractMatches);
                 bonus += Math.min(extraOccurrences * multipleOccurrenceBonus, 0.15); // Cap bonus at 0.15
             }
 
             // Calculate final score and cap at 1.0
             double finalScore = Math.min(1.0, baseScore + bonus);
 
-            log.debug("Relevance calculation - Keywords matched: {}/{}, Base score: {}, Bonus: {}, Final: {}",
-                    matchedKeywords, searchKeywords.size(), baseScore, bonus, finalScore);
+            log.debug("Relevance calculation - Title matches: {}, Abstract matches: {}, Base: {}, Bonus: {}, Final: {}",
+                    titleMatches, abstractMatches, baseScore, bonus, finalScore);
 
             return finalScore;
 
@@ -376,5 +953,58 @@ public class PubMedService {
         }
 
         return count;
+    }
+
+    /**
+     * Extract brain region codes mentioned in research article abstracts
+     * Uses BrainNetworkService's alias mapping to match various ways regions are mentioned
+     *
+     * @param articles List of PubMed articles with abstracts
+     * @param regionAliasMap Map of region codes to their aliases (from BrainNetworkService)
+     * @return Set of region codes that were mentioned in the abstracts
+     */
+    public Set<String> extractMentionedRegions(List<PubMedArticleDTO> articles, Map<String, List<String>> regionAliasMap) {
+        Set<String> mentionedRegions = new HashSet<>();
+
+        if (articles == null || articles.isEmpty()) {
+            log.warn("No articles provided for region extraction");
+            return mentionedRegions;
+        }
+
+        log.info("Extracting mentioned regions from {} articles", articles.size());
+
+        for (PubMedArticleDTO article : articles) {
+            String title = article.getTitle() != null ? article.getTitle().toLowerCase() : "";
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+
+            // Combine title and abstract for searching
+            String fullText = title + " " + abstractText;
+
+            // Search for each region's aliases in the text
+            for (Map.Entry<String, List<String>> entry : regionAliasMap.entrySet()) {
+                String regionCode = entry.getKey();
+                List<String> aliases = entry.getValue();
+
+                // Check if any alias is mentioned in the text
+                for (String alias : aliases) {
+                    String normalizedAlias = alias.toLowerCase().trim();
+
+                    // Use word boundary matching to avoid partial matches
+                    // e.g., "hip" shouldn't match "ship"
+                    String regex = "\\b" + java.util.regex.Pattern.quote(normalizedAlias) + "\\b";
+                    if (java.util.regex.Pattern.compile(regex).matcher(fullText).find()) {
+                        mentionedRegions.add(regionCode);
+                        log.debug("Found region {} via alias '{}' in article: {}",
+                                regionCode, alias, article.getTitle());
+                        break; // No need to check other aliases for this region
+                    }
+                }
+            }
+        }
+
+        log.info("Extracted {} mentioned regions from abstracts: {}",
+                mentionedRegions.size(), mentionedRegions);
+
+        return mentionedRegions;
     }
 }

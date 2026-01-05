@@ -25,6 +25,8 @@ import java.util.Map;
 public class SimulationController {
 
     private final SimulationService simulationService;
+    private final com.synapsim.repository.BrainRegionRepository brainRegionRepository;
+    private final com.synapsim.repository.NeuralConnectionRepository neuralConnectionRepository;
 
     /**
      * Create and run a new simulation
@@ -34,7 +36,7 @@ public class SimulationController {
      * @return Simulation results
      */
     @PostMapping
-    public ResponseEntity<SimulationResponse> createSimulation(
+    public ResponseEntity<?> createSimulation(
             @Valid @RequestBody ScenarioRequest request
     ) {
         log.info("Received simulation request: compound={}, setting={}",
@@ -48,9 +50,21 @@ public class SimulationController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
+        } catch (com.synapsim.exception.NoResearchFoundException e) {
+            log.warn("No research found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "error", "NO_RESEARCH_FOUND",
+                            "message", e.getMessage()
+                    ));
+
         } catch (Exception e) {
             log.error("Error creating simulation: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "INTERNAL_ERROR",
+                            "message", "An unexpected error occurred while creating the simulation"
+                    ));
         }
     }
 
@@ -111,6 +125,24 @@ public class SimulationController {
                 "status", "ok",
                 "service", "simulation-service",
                 "timestamp", java.time.LocalDateTime.now().toString()
+        ));
+    }
+
+    /**
+     * Debug endpoint to check database data
+     * GET /api/simulations/debug/data
+     */
+    @GetMapping("/debug/data")
+    public ResponseEntity<Map<String, Object>> debugData() {
+        long regionCount = brainRegionRepository.count();
+        long connectionCount = neuralConnectionRepository.count();
+
+        return ResponseEntity.ok(Map.of(
+                "brainRegions", regionCount,
+                "neuralConnections", connectionCount,
+                "regions", brainRegionRepository.findAll().stream()
+                        .map(r -> r.getName() + " (" + r.getCode() + ")")
+                        .toList()
         ));
     }
 }

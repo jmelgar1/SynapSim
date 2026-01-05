@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PrimaryButton from '@/components/common/PrimaryButton.vue'
+import { simulationService } from '@/services/simulation'
 import {
   COMPOUND_INSPIRATIONS,
   THERAPEUTIC_SETTINGS,
@@ -25,6 +26,11 @@ const scenario = ref({
   simulationDuration: null,
 })
 
+// Loading state
+const isSubmitting = ref(false)
+const errorMessage = ref(null)
+const showNoResearchModal = ref(false)
+
 // Validation
 const isFormValid = computed(() => {
   return (
@@ -46,22 +52,58 @@ const hideTooltip = () => {
   activeTooltip.value = null
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!isFormValid.value) return
 
-  // Save scenario to localStorage (for now)
-  const savedScenarios = JSON.parse(localStorage.getItem('synapSimScenarios') || '[]')
-  savedScenarios.push({
-    questId,
-    scenario: scenario.value,
-    createdAt: new Date().toISOString(),
-  })
-  localStorage.setItem('synapSimScenarios', JSON.stringify(savedScenarios))
+  isSubmitting.value = true
+  errorMessage.value = null
 
-  // TODO: Navigate to simulation results view
-  console.log('Scenario submitted:', scenario.value)
-  alert('Scenario created! Simulation visualization coming soon...')
-  router.push('/dashboard')
+  try {
+    // Prepare request payload matching backend ScenarioRequest
+    const requestData = {
+      questId: questId,
+      compoundInspiration: scenario.value.compoundInspiration,
+      therapeuticSetting: scenario.value.therapeuticSetting,
+      primaryBrainRegion: scenario.value.primaryBrainRegion,
+      simulationDuration: scenario.value.simulationDuration,
+      integrationSteps: null, // Optional field
+    }
+
+    console.log('Submitting simulation request:', requestData)
+
+    // Call backend API
+    const response = await simulationService.createSimulation(requestData)
+
+    console.log('Simulation created successfully:', response)
+
+    // Save scenario to localStorage for history
+    const savedScenarios = JSON.parse(localStorage.getItem('synapSimScenarios') || '[]')
+    savedScenarios.push({
+      questId,
+      scenario: scenario.value,
+      simulationId: response.id,
+      createdAt: new Date().toISOString(),
+    })
+    localStorage.setItem('synapSimScenarios', JSON.stringify(savedScenarios))
+
+    // Navigate to simulation results view
+    router.push(`/simulation/${response.id}`)
+  } catch (error) {
+    console.error('Error creating simulation:', error)
+
+    // Check if it's a "no research found" error
+    if (error.response?.data?.error === 'NO_RESEARCH_FOUND') {
+      showNoResearchModal.value = true
+    } else {
+      errorMessage.value = error.response?.data?.message || error.message || 'Failed to create simulation. Please ensure the backend is running.'
+    }
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const closeNoResearchModal = () => {
+  showNoResearchModal.value = false
 }
 
 const goBack = () => {
@@ -95,10 +137,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Compound Inspiration
-            <span class="info-icon" @mouseenter="showTooltip('compound')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'compound'" class="tooltip">
-              Research-based models inspired by psychedelic compounds and their effects on neural connectivity
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('compound')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'compound'" class="tooltip">
+                <span>Each compound affects brain networks differently. Psilocybin reduces Default Mode Network activity (ego dissolution), LSD enhances sensory integration, Ketamine rapidly rewires mood circuits, and MDMA strengthens empathy pathways. Choose based on which neural changes interest you most.</span>
+              </div>
+            </span>
           </label>
           <div class="options-grid">
             <div
@@ -120,10 +164,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Therapeutic Setting
-            <span class="info-icon" @mouseenter="showTooltip('setting')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'setting'" class="tooltip">
-              The environmental context that can influence neural pathway development
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('setting')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'setting'" class="tooltip">
+                <span>Set and setting matter! Calm environments enhance stress reduction pathways, guided therapy strengthens emotional processing circuits, meditation spaces boost introspective networks, creative settings amplify divergent thinking, and social contexts enhance empathy connections.</span>
+              </div>
+            </span>
           </label>
           <div class="options-grid">
             <div
@@ -144,10 +190,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Primary Brain Region
-            <span class="info-icon" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'brain'" class="tooltip">
-              The main neural area to focus on in this simulation
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'brain'" class="tooltip">
+                <span>Focus on a specific brain region to see targeted effects. The Amygdala processes fear/anxiety, Prefrontal Cortex handles decision-making, Hippocampus manages memory, and the Default Mode Network controls self-referential thinking. This helps personalize the simulation to your interests.</span>
+              </div>
+            </span>
           </label>
           <select v-model="scenario.primaryBrainRegion" class="form-select">
             <option :value="null" disabled>Select a brain region</option>
@@ -161,10 +209,12 @@ const goBack = () => {
         <div class="form-group">
           <label class="form-label">
             Simulation Duration
-            <span class="info-icon" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">ⓘ</span>
-            <div v-if="activeTooltip === 'duration'" class="tooltip">
-              Simulated session length affecting the depth of neural changes
-            </div>
+            <span class="info-wrapper" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'duration'" class="tooltip">
+                <span>Duration affects neuroplastic depth. Short sessions (3-5 hours) show acute connectivity changes, Medium (6-8 hours) allows for deeper network reorganization, and Extended (8+ hours) simulates profound rewiring with lasting integration potential. Longer isn't always better—it depends on your learning goals.</span>
+              </div>
+            </span>
           </label>
           <div class="duration-options">
             <div
@@ -180,10 +230,45 @@ const goBack = () => {
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="error-message">
+          <span class="error-icon">⚠️</span>
+          <p>{{ errorMessage }}</p>
+        </div>
+
         <!-- Submit Button -->
         <div class="form-actions">
-          <PrimaryButton :disabled="!isFormValid" @click="handleSubmit" class="forge-button">
-            🧠 Forge Pathway
+          <PrimaryButton
+            :disabled="!isFormValid || isSubmitting"
+            @click="handleSubmit"
+            class="forge-button"
+          >
+            <span v-if="isSubmitting">⏳ Processing...</span>
+            <span v-else>🧠 Forge Pathway</span>
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Research Found Modal -->
+    <div v-if="showNoResearchModal" class="modal-overlay" @click="closeNoResearchModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>No Relevant Research Found</h2>
+          <button class="modal-close" @click="closeNoResearchModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-icon">🔬</div>
+          <p class="modal-message">
+            We couldn't find any relevant research articles for your selected combination of parameters.
+          </p>
+          <p class="modal-suggestion">
+            Please try adjusting your compound inspiration or therapeutic setting to explore different pathways.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <PrimaryButton @click="closeNoResearchModal">
+            Try Different Parameters
           </PrimaryButton>
         </div>
       </div>
@@ -296,6 +381,12 @@ const goBack = () => {
   position: relative;
 }
 
+.info-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .info-icon {
   display: inline-block;
   width: 18px;
@@ -308,7 +399,6 @@ const goBack = () => {
   margin-left: 0.5rem;
   cursor: help;
   color: #667eea;
-  position: relative;
 }
 
 .tooltip {
@@ -316,16 +406,20 @@ const goBack = () => {
   left: 0;
   top: 100%;
   margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-heading);
-  color: white;
+  padding: 0.875rem 1.125rem;
+  background: #2c3e50;
+  color: #ffffff;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 400;
-  line-height: 1.4;
-  z-index: 10;
-  max-width: 300px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.5;
+  z-index: 1000;
+  max-width: 400px;
+  width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: visible;
 }
 
 .tooltip::before {
@@ -335,7 +429,7 @@ const goBack = () => {
   left: 20px;
   width: 12px;
   height: 12px;
-  background: var(--color-heading);
+  background: #2c3e50;
   transform: rotate(45deg);
 }
 
@@ -476,6 +570,30 @@ const goBack = () => {
   outline: none;
 }
 
+/* Error Message */
+.error-message {
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid #e74c3c;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.error-message p {
+  margin: 0;
+  color: #e74c3c;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
 /* Actions */
 .form-actions {
   display: flex;
@@ -493,6 +611,107 @@ const goBack = () => {
 .forge-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--color-background);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: 2rem;
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.modal-message {
+  font-size: 1.1rem;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.modal-suggestion {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {
