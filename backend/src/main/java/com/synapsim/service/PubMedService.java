@@ -28,6 +28,7 @@ public class PubMedService {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final BrainRegionContextValidator contextValidator;
 
     @Value("${pubmed.api.base-url}")
     private String pubmedBaseUrl;
@@ -50,9 +51,10 @@ public class PubMedService {
     @Value("${pubmed.relevance.multiple-occurrence-bonus}")
     private Double multipleOccurrenceBonus;
 
-    public PubMedService(WebClient webClient) {
+    public PubMedService(WebClient webClient, BrainRegionContextValidator contextValidator) {
         this.webClient = webClient;
         this.objectMapper = new ObjectMapper();
+        this.contextValidator = contextValidator;
     }
 
     /**
@@ -974,11 +976,12 @@ public class PubMedService {
         log.info("Extracting mentioned regions from {} articles", articles.size());
 
         for (PubMedArticleDTO article : articles) {
-            String title = article.getTitle() != null ? article.getTitle().toLowerCase() : "";
-            String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+            String title = article.getTitle() != null ? article.getTitle() : "";
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText() : "";
 
-            // Combine title and abstract for searching
-            String fullText = title + " " + abstractText;
+            // Keep original case for context validation
+            String fullTextOriginal = title + " " + abstractText;
+            String fullTextLower = fullTextOriginal.toLowerCase();
 
             // Search for each region's aliases in the text
             for (Map.Entry<String, List<String>> entry : regionAliasMap.entrySet()) {
@@ -992,11 +995,27 @@ public class PubMedService {
                     // Use word boundary matching to avoid partial matches
                     // e.g., "hip" shouldn't match "ship"
                     String regex = "\\b" + java.util.regex.Pattern.quote(normalizedAlias) + "\\b";
-                    if (java.util.regex.Pattern.compile(regex).matcher(fullText).find()) {
-                        mentionedRegions.add(regionCode);
-                        log.debug("Found region {} via alias '{}' in article: {}",
-                                regionCode, alias, article.getTitle());
-                        break; // No need to check other aliases for this region
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex).matcher(fullTextLower);
+
+                    while (matcher.find()) {
+                        int matchPosition = matcher.start();
+
+                        // Validate with context analysis to filter out false positives
+                        if (contextValidator.isValidBrainRegionMention(
+                                fullTextOriginal,
+                                matchPosition,
+                                normalizedAlias,
+                                alias.length())) {
+
+                            mentionedRegions.add(regionCode);
+                            log.debug("Found region {} via alias '{}' in article: {}",
+                                    regionCode, alias, article.getTitle());
+                            break; // No need to check other aliases for this region
+                        }
+                    }
+
+                    if (mentionedRegions.contains(regionCode)) {
+                        break; // Already found this region, move to next region
                     }
                 }
             }

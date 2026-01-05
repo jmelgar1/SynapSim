@@ -34,6 +34,7 @@ public class SimulationService {
     private final BrainNetworkService brainNetworkService;
     private final PubMedService pubMedService;
     private final ObjectMapper objectMapper;
+    private final BrainRegionContextValidator contextValidator;
 
     /**
      * Run a complete simulation based on scenario parameters
@@ -479,23 +480,46 @@ public class SimulationService {
             for (String regionCode : mentionedRegionCodes) {
                 List<String> aliases = regionAliases.getOrDefault(regionCode, List.of(regionCode.toLowerCase()));
 
+                boolean mentionAdded = false;
+
                 // Find sentences mentioning this region
-                for (String alias : aliases) {
-                    if (lowerText.contains(alias.toLowerCase())) {
-                        // Extract relevant excerpt containing the region mention
-                        String excerpt = extractExcerpt(combinedText, alias);
-                        String context = determineContext(excerpt);
+                aliasLoop: for (String alias : aliases) {
+                    if (mentionAdded) {
+                        break; // Already found a mention for this region in this article
+                    }
 
-                        if (excerpt != null && !excerpt.isEmpty()) {
-                            MentionedRegionDTO.ResearchMention mention = MentionedRegionDTO.ResearchMention.builder()
-                                    .articleTitle(article.getTitle())
-                                    .pubmedId(article.getPubmedId())
-                                    .excerpt(excerpt)
-                                    .context(context)
-                                    .build();
+                    String normalizedAlias = alias.toLowerCase().trim();
 
-                            regionMap.get(regionCode).addMention(mention);
-                            break; // Only one mention per article per region
+                    // Use word boundary matching to avoid partial matches
+                    String regex = "\\b" + java.util.regex.Pattern.quote(normalizedAlias) + "\\b";
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex).matcher(lowerText);
+
+                    while (matcher.find()) {
+                        int matchPosition = matcher.start();
+
+                        // Validate with context analysis to filter out false positives
+                        if (contextValidator.isValidBrainRegionMention(
+                                combinedText,
+                                matchPosition,
+                                normalizedAlias,
+                                alias.length())) {
+
+                            // Extract relevant excerpt containing the region mention
+                            String excerpt = extractExcerpt(combinedText, alias);
+                            String context = determineContext(excerpt);
+
+                            if (excerpt != null && !excerpt.isEmpty()) {
+                                MentionedRegionDTO.ResearchMention mention = MentionedRegionDTO.ResearchMention.builder()
+                                        .articleTitle(article.getTitle())
+                                        .pubmedId(article.getPubmedId())
+                                        .excerpt(excerpt)
+                                        .context(context)
+                                        .build();
+
+                                regionMap.get(regionCode).addMention(mention);
+                                mentionAdded = true;
+                                break aliasLoop; // Exit both loops - only one mention per article per region
+                            }
                         }
                     }
                 }
