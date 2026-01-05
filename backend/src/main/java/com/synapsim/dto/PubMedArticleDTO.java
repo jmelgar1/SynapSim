@@ -19,6 +19,7 @@ public class PubMedArticleDTO {
     private String authors;
     private String publicationDate;
     private String abstractText;
+    private String fullText;
     private String articleUrl;
     private Double relevanceScore;
     private String keywords;

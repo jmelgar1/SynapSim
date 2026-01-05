@@ -36,7 +36,7 @@ public class SimulationController {
      * @return Simulation results
      */
     @PostMapping
-    public ResponseEntity<SimulationResponse> createSimulation(
+    public ResponseEntity<?> createSimulation(
             @Valid @RequestBody ScenarioRequest request
     ) {
         log.info("Received simulation request: compound={}, setting={}",
@@ -50,9 +50,21 @@ public class SimulationController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
+        } catch (com.synapsim.exception.NoResearchFoundException e) {
+            log.warn("No research found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "error", "NO_RESEARCH_FOUND",
+                            "message", e.getMessage()
+                    ));
+
         } catch (Exception e) {
             log.error("Error creating simulation: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "INTERNAL_ERROR",
+                            "message", "An unexpected error occurred while creating the simulation"
+                    ));
         }
     }
 
