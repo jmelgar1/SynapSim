@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { simulationService } from '@/services/simulation'
 import PrimaryButton from '@/components/common/PrimaryButton.vue'
+import BrainNetworkGraph from '@/components/features/BrainNetworkGraph.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,27 +148,13 @@ const shouldShowFullTextExpander = (fullText) => {
           <p class="prediction-text">{{ simulation.predictionSummary }}</p>
         </div>
 
-        <!-- Network State (Simple Display) -->
+        <!-- Brain Network Visualization -->
         <div class="section network-section">
           <h2>Brain Network State</h2>
-          <div class="network-stats">
-            <div class="stat-card">
-              <span class="stat-label">Total Nodes</span>
-              <span class="stat-value">{{ simulation.networkState?.metrics?.totalNodes || 0 }}</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Total Connections</span>
-              <span class="stat-value">{{ simulation.networkState?.metrics?.totalConnections || 0 }}</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Network Density</span>
-              <span class="stat-value">{{ (simulation.networkState?.metrics?.networkDensity * 100 || 0).toFixed(1) }}%</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Avg Connection Strength</span>
-              <span class="stat-value">{{ (simulation.networkState?.metrics?.averageConnectionStrength || 0).toFixed(2) }}</span>
-            </div>
-          </div>
+          <BrainNetworkGraph
+            :networkState="simulation.networkState || { nodes: [], edges: [], metrics: {} }"
+            :mentionedRegions="simulation.mentionedRegions || []"
+          />
         </div>
 
         <!-- Brain Regions Mentioned in Research -->
@@ -475,36 +462,9 @@ const shouldShowFullTextExpander = (fullText) => {
   font-size: 1rem;
 }
 
-/* Network Stats */
-.network-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.stat-card {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+/* Network Section - now contains BrainNetworkGraph component */
+.network-section {
   padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #667eea;
 }
 
 /* Brain Regions List */
@@ -784,9 +744,6 @@ const shouldShowFullTextExpander = (fullText) => {
     align-items: flex-start;
   }
 
-  .network-stats {
-    grid-template-columns: 1fr;
-  }
 
   .reference-header {
     flex-direction: column;
