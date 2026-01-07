@@ -92,9 +92,6 @@ public class BrainNetworkService {
         // Get setting-specific modifiers
         Map<String, Double> settingModifiers = getSettingModifiers(scenario.getTherapeuticSetting());
 
-        // Get duration multiplier
-        double durationMultiplier = getDurationMultiplier(scenario.getSimulationDuration());
-
         // Apply changes to each edge in the graph
         for (DefaultWeightedEdge edge : graph.edgeSet()) {
             String source = graph.getEdgeSource(edge);
@@ -104,7 +101,7 @@ public class BrainNetworkService {
             // Calculate weight change based on modifiers
             double weightChange = calculateWeightChange(
                     source, target, currentWeight,
-                    compoundModifiers, settingModifiers, durationMultiplier
+                    compoundModifiers, settingModifiers
             );
 
             double newWeight = Math.max(minConnectionWeight,
@@ -130,8 +127,7 @@ public class BrainNetworkService {
     private double calculateWeightChange(
             String source, String target, double currentWeight,
             Map<String, Double> compoundModifiers,
-            Map<String, Double> settingModifiers,
-            double durationMultiplier
+            Map<String, Double> settingModifiers
     ) {
         // Base change starts at 0
         double change = 0.0;
@@ -146,9 +142,6 @@ public class BrainNetworkService {
         // Apply setting-specific modifier
         double settingEffect = settingModifiers.getOrDefault(connectionKey, 0.0);
         change += settingEffect;
-
-        // Apply duration multiplier
-        change *= durationMultiplier;
 
         // Add some variability (±10%) to simulate individual differences
         double variability = (Math.random() - 0.5) * 0.2;
@@ -254,16 +247,6 @@ public class BrainNetworkService {
         return modifiers;
     }
 
-    /**
-     * Get duration multiplier
-     */
-    private double getDurationMultiplier(Scenario.SimulationDuration duration) {
-        return switch (duration) {
-            case SHORT -> 0.7;
-            case MEDIUM -> 1.0;
-            case EXTENDED -> 1.3;
-        };
-    }
 
     /**
      * Generate connection key from region names (normalized)

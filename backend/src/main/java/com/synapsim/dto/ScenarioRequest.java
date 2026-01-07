@@ -24,9 +24,6 @@ public class ScenarioRequest {
 
     private String primaryBrainRegion;
 
-    @NotNull(message = "Simulation duration is required")
-    private String simulationDuration;
-
     private String integrationSteps;
 
     // Helper method to convert string to enum
@@ -36,9 +33,5 @@ public class ScenarioRequest {
 
     public Scenario.TherapeuticSetting getSettingType() {
         return Scenario.TherapeuticSetting.valueOf(therapeuticSetting.toUpperCase().replace("-", "_"));
-    }
-
-    public Scenario.SimulationDuration getDurationType() {
-        return Scenario.SimulationDuration.valueOf(simulationDuration.toUpperCase());
     }
 }

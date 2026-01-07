@@ -106,65 +106,6 @@ export const THERAPEUTIC_SETTINGS = [
   },
 ]
 
-export const BRAIN_REGIONS = [
-  {
-    value: 'medial-prefrontal-cortex',
-    label: 'Medial Prefrontal Cortex',
-    description: 'Hub for self-awareness; shows decreased activity and decoupling, promoting flexible thinking.',
-  },
-  {
-    value: 'posterior-cingulate-cortex',
-    label: 'Posterior Cingulate Cortex',
-    description: 'Integrates personal experiences; connectivity weakens, linked to ego dissolution.',
-  },
-  {
-    value: 'anterior-hippocampus',
-    label: 'Anterior Hippocampus',
-    description: 'Handles memory; reduced functional connectivity with DMN during and post-trip, aiding insights.',
-  },
-  {
-    value: 'amygdala',
-    label: 'Amygdala',
-    description: 'Processes emotions; decreased reactivity and altered connectivity, reducing fear.',
-  },
-  {
-    value: 'visual-cortex',
-    label: 'Visual Cortex',
-    description: 'Increased activity and connections, contributing to hallucinations.',
-  },
-  {
-    value: 'auditory-cortex',
-    label: 'Auditory Cortex',
-    description: 'Heightened integration with other areas, enhancing perceptual changes.',
-  },
-  {
-    value: 'thalamus',
-    label: 'Thalamus',
-    description: 'Relays signals; desynchronizes, allowing novel information flow.',
-  },
-  {
-    value: 'anteromedial-caudate',
-    label: 'Anteromedial Caudate',
-    description: 'Involved in motivation; shows connectivity changes for behavioral flexibility.',
-  },
-  {
-    value: 'frontoparietal-regions',
-    label: 'Frontoparietal Regions',
-    description: 'Attention control; increased integration with sensory and limbic systems.',
-  },
-  {
-    value: 'cerebellum',
-    label: 'Cerebellum',
-    description: 'Motor and cognitive roles; exhibits functional connectivity shifts.',
-  },
-]
-
-export const SIMULATION_DURATIONS = [
-  { value: 'short', label: '15-30 minutes', description: 'Quick exploration' },
-  { value: 'medium', label: '1-2 hours', description: 'Standard session' },
-  { value: 'extended', label: '3-4 hours', description: 'Deep dive experience' },
-]
-
 // Quest definitions
 export const QUESTS = [
   {

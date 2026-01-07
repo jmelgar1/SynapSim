@@ -207,7 +207,6 @@ public class SimulationService {
         scenario.setCompoundInspiration(request.getCompoundType());
         scenario.setTherapeuticSetting(request.getSettingType());
         scenario.setPrimaryBrainRegion(request.getPrimaryBrainRegion());
-        scenario.setSimulationDuration(request.getDurationType());
         scenario.setIntegrationSteps(request.getIntegrationSteps());
         return scenario;
     }

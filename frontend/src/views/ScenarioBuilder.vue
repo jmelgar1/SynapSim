@@ -6,8 +6,6 @@ import { simulationService } from '@/services/simulation'
 import {
   COMPOUND_INSPIRATIONS,
   THERAPEUTIC_SETTINGS,
-  BRAIN_REGIONS,
-  SIMULATION_DURATIONS,
   QUESTS,
 } from '@/constants'
 
@@ -22,8 +20,6 @@ const quest = QUESTS.find((q) => q.id === questId)
 const scenario = ref({
   compoundInspiration: null,
   therapeuticSetting: null,
-  primaryBrainRegion: null,
-  simulationDuration: null,
 })
 
 // Loading state
@@ -35,9 +31,7 @@ const showNoResearchModal = ref(false)
 const isFormValid = computed(() => {
   return (
     scenario.value.compoundInspiration &&
-    scenario.value.therapeuticSetting &&
-    scenario.value.primaryBrainRegion &&
-    scenario.value.simulationDuration
+    scenario.value.therapeuticSetting
   )
 })
 
@@ -64,8 +58,6 @@ const handleSubmit = async () => {
       questId: questId,
       compoundInspiration: scenario.value.compoundInspiration,
       therapeuticSetting: scenario.value.therapeuticSetting,
-      primaryBrainRegion: scenario.value.primaryBrainRegion,
-      simulationDuration: scenario.value.simulationDuration,
       integrationSteps: null, // Optional field
     }
 
@@ -182,50 +174,6 @@ const goBack = () => {
               <div class="setting-icon">{{ option.icon }}</div>
               <h4>{{ option.label }}</h4>
               <p class="option-description">{{ option.description }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Primary Brain Region -->
-        <div class="form-group">
-          <label class="form-label">
-            Primary Brain Region
-            <span class="info-wrapper" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">
-              <span class="info-icon">ⓘ</span>
-              <div v-if="activeTooltip === 'brain'" class="tooltip">
-                <span>Focus on a specific brain region to see targeted effects. The Amygdala processes fear/anxiety, Prefrontal Cortex handles decision-making, Hippocampus manages memory, and the Default Mode Network controls self-referential thinking. This helps personalize the simulation to your interests.</span>
-              </div>
-            </span>
-          </label>
-          <select v-model="scenario.primaryBrainRegion" class="form-select">
-            <option :value="null" disabled>Select a brain region</option>
-            <option v-for="region in BRAIN_REGIONS" :key="region.value" :value="region.value">
-              {{ region.label }} - {{ region.description }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Simulation Duration -->
-        <div class="form-group">
-          <label class="form-label">
-            Simulation Duration
-            <span class="info-wrapper" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">
-              <span class="info-icon">ⓘ</span>
-              <div v-if="activeTooltip === 'duration'" class="tooltip">
-                <span>Duration affects neuroplastic depth. Short sessions (3-5 hours) show acute connectivity changes, Medium (6-8 hours) allows for deeper network reorganization, and Extended (8+ hours) simulates profound rewiring with lasting integration potential. Longer isn't always better—it depends on your learning goals.</span>
-              </div>
-            </span>
-          </label>
-          <div class="duration-options">
-            <div
-              v-for="duration in SIMULATION_DURATIONS"
-              :key="duration.value"
-              class="duration-card"
-              :class="{ selected: scenario.simulationDuration === duration.value }"
-              @click="scenario.simulationDuration = duration.value"
-            >
-              <h4>{{ duration.label }}</h4>
-              <p>{{ duration.description }}</p>
             </div>
           </div>
         </div>
@@ -489,65 +437,6 @@ const goBack = () => {
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-heading);
-}
-
-/* Select */
-.form-select {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-background);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.form-select:hover,
-.form-select:focus {
-  border-color: #667eea;
-  outline: none;
-}
-
-/* Duration Options */
-.duration-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.duration-card {
-  padding: 1.25rem;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  background: var(--color-background-soft);
-}
-
-.duration-card:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-}
-
-.duration-card.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.duration-card h4 {
-  margin: 0 0 0.25rem 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-heading);
-}
-
-.duration-card p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--color-text);
 }
 
 /* Textarea */
