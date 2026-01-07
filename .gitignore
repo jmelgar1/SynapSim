@@ -12,7 +12,6 @@ target/
 !/mvnw
 !/mvnw.cmd
 .vscode/
-.claude/
 .idea/
 *.iws
 *.iml

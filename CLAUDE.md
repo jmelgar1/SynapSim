@@ -269,6 +269,61 @@ Backend allows frontend connections from `http://localhost:5173` (Vite dev serve
 Frontend uses Vite env vars:
 - `VITE_API_BASE_URL` - Backend API URL (default: `http://localhost:8080/api`)
 
+## Automation and Hooks
+
+### SessionEnd Hook
+Location: `.claude/hooks/session-end-update-docs.sh`
+
+**Purpose:** Automatically updates CLAUDE.md at the end of each Claude Code session to keep documentation in sync with code changes.
+
+**Configuration:** Configured in `.claude/settings.json`:
+```json
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/melgar/SynapSim/.claude/hooks/session-end-update-docs.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Known Issues and Debugging:**
+The SessionEnd hook has been experiencing issues where CLAUDE.md is not being updated. Key findings from debugging:
+- The hook script uses `claude -p` to generate updated documentation
+- Using command substitution `$(cat "$TEMP_PROMPT")` can exceed shell argument length limits (typically 128KB-2MB)
+- Large session transcripts cause the command to fail with exit code 126
+- The `claude` CLI is available at `/home/melgar/.npm-global/bin/claude`
+- Dependencies `jq` is installed and working
+
+**Implementation Details:**
+The script should use stdin redirection instead of command substitution to avoid argument length limits:
+```bash
+# INCORRECT (fails with large files):
+claude -p "$(cat "$TEMP_PROMPT")" > "$TEMP_CLAUDE_MD" 2>&1
+
+# CORRECT (handles large files):
+claude -p < "$TEMP_PROMPT" > "$TEMP_CLAUDE_MD" 2>&1
+```
+
+**Script Flow:**
+1. Receives session data as JSON via stdin
+2. Extracts transcript path and project directory using `jq`
+3. Builds a prompt file containing transcript + current CLAUDE.md
+4. Calls `claude -p` to generate updated documentation
+5. Validates output starts with "# CLAUDE.md"
+6. Atomically replaces CLAUDE.md if validation passes
+
+**Dependencies:**
+- `jq` - For parsing JSON session data (installed at `/usr/bin/jq`)
+- `claude` CLI - Must be in PATH for hook execution (located at `/home/melgar/.npm-global/bin/claude`)
+
 ## Current Development State
 
 **Completed:**
@@ -280,6 +335,7 @@ Frontend uses Vite env vars:
 
 **Known Issues:**
 - Some SQL parsing issues in `import.sql` (multi-row INSERT statements) - application works despite warnings
+- SessionEnd hook not updating CLAUDE.md due to shell argument length limits when using command substitution
 
 **Future Enhancements:**
 - User authentication system

@@ -1,0 +1,1 @@
+Start the Spring Boot backend application with test profile (H2 in-memory database) using `./mvnw spring-boot:run -Dspring-boot.run.profiles=test` from the `/home/melgar/SynapSim/backend` directory.
