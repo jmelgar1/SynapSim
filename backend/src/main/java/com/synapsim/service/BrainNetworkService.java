@@ -1,6 +1,8 @@
 package com.synapsim.service;
 
 import com.synapsim.dto.BrainNetworkDTO;
+import com.synapsim.dto.ConnectionEvidence;
+import com.synapsim.dto.ConnectionKey;
 import com.synapsim.dto.SimulationResponse;
 import com.synapsim.model.BrainRegion;
 import com.synapsim.model.NeuralConnection;
@@ -298,7 +300,7 @@ public class BrainNetworkService {
         aliases.put("AHP", List.of("anterior hippocampus", "hippocampus", "hippocampal"));
         aliases.put("AMY", List.of("amygdala", "amygdalae"));
         aliases.put("V1", List.of("visual cortex", "primary visual", "v1", "striate cortex", "occipital"));
-        aliases.put("A1", List.of("auditory cortex", "primary auditory", "a1", "temporal"));
+        aliases.put("A1", List.of("auditory cortex", "primary auditory", "a1", "temporal cortex", "temporal lobe"));
         aliases.put("THL", List.of("thalamus", "thalamic"));
         aliases.put("AMC", List.of("anteromedial caudate", "caudate", "striatum"));
         aliases.put("FP", List.of("frontoparietal", "frontoparietal regions", "fronto-parietal"));
@@ -306,15 +308,15 @@ public class BrainNetworkService {
 
         // Brainstem regions
         aliases.put("MED", List.of("medulla oblongata", "medulla", "brainstem"));
-        aliases.put("LC", List.of("locus coeruleus", "locus ceruleus", "noradrenergic", "norepinephrine", "lc"));
-        aliases.put("DRN", List.of("dorsal raphe nucleus", "dorsal raphe", "raphe nucleus", "raphe nuclei", "serotonergic", "5-ht", "drn"));
+        aliases.put("LC", List.of("locus coeruleus", "locus ceruleus", "lc"));
+        aliases.put("DRN", List.of("dorsal raphe nucleus", "dorsal raphe", "raphe nucleus", "raphe nuclei", "drn"));
         aliases.put("PON", List.of("pons", "pontine"));
         aliases.put("CV", List.of("cerebellar vermis", "vermis"));
         aliases.put("DN", List.of("dentate nucleus", "cerebellar dentate"));
 
         // Midbrain regions
         aliases.put("PAG", List.of("periaqueductal gray", "periaqueductal grey", "pag", "central gray"));
-        aliases.put("VTA", List.of("ventral tegmental area", "ventral tegmental", "vta", "dopamine", "dopaminergic"));
+        aliases.put("VTA", List.of("ventral tegmental area", "ventral tegmental", "vta"));
         aliases.put("SN", List.of("substantia nigra", "nigra", "sn"));
         aliases.put("SC", List.of("superior colliculus", "superior colliculi", "colliculus"));
         aliases.put("IC", List.of("inferior colliculus", "inferior colliculi"));
@@ -332,21 +334,21 @@ public class BrainNetworkService {
         aliases.put("ILN", List.of("intralaminar nuclei", "intralaminar thalamus"));
 
         // Hypothalamus expanded
-        aliases.put("SCN", List.of("suprachiasmatic nucleus", "suprachiasmatic", "scn", "circadian"));
-        aliases.put("PVN", List.of("paraventricular nucleus", "paraventricular", "pvn", "hpa axis"));
+        aliases.put("SCN", List.of("suprachiasmatic nucleus", "suprachiasmatic", "scn"));
+        aliases.put("PVN", List.of("paraventricular nucleus", "paraventricular", "pvn"));
         aliases.put("VMH", List.of("ventromedial hypothalamus", "ventromedial", "vmh"));
-        aliases.put("LH", List.of("lateral hypothalamus", "lateral", "lh"));
+        aliases.put("LH", List.of("lateral hypothalamus", "lh"));
         aliases.put("MB", List.of("mammillary bodies", "mammillary", "mammillary body"));
 
         // Basal Ganglia
         aliases.put("PUT", List.of("putamen"));
         aliases.put("CD", List.of("caudate nucleus", "caudate"));
-        aliases.put("NAcc", List.of("nucleus accumbens", "accumbens", "ventral striatum", "nacc", "reward", "nac"));
+        aliases.put("NAcc", List.of("nucleus accumbens", "accumbens", "ventral striatum", "nacc", "nac"));
         aliases.put("GP", List.of("globus pallidus", "pallidum"));
         aliases.put("STN", List.of("subthalamic nucleus", "subthalamic", "stn"));
 
         // Basal Forebrain
-        aliases.put("NBM", List.of("nucleus basalis", "nucleus basalis of meynert", "nbm", "basal nucleus", "acetylcholine"));
+        aliases.put("NBM", List.of("nucleus basalis", "nucleus basalis of meynert", "nbm", "basal nucleus"));
         aliases.put("SN_BF", List.of("septal nuclei", "septum", "septal"));
 
         // Hippocampal Formation
@@ -394,7 +396,7 @@ public class BrainNetworkService {
         aliases.put("STG", List.of("superior temporal gyrus", "superior temporal", "stg"));
         aliases.put("MTG", List.of("middle temporal gyrus", "middle temporal", "mtg"));
         aliases.put("ITG", List.of("inferior temporal gyrus", "inferior temporal", "itg"));
-        aliases.put("FG", List.of("fusiform gyrus", "fusiform", "fg", "face area"));
+        aliases.put("FG", List.of("fusiform gyrus", "fusiform", "fg", "fusiform face area"));
         aliases.put("TP", List.of("temporal pole", "anterior temporal"));
 
         // Occipital/Visual Cortex expanded
@@ -405,10 +407,23 @@ public class BrainNetworkService {
         aliases.put("CUN", List.of("cuneus", "cuneal"));
 
         // Other regions
-        aliases.put("CLA", List.of("claustrum", "claustral", "consciousness"));
-        aliases.put("PIR", List.of("piriform cortex", "piriform", "primary olfactory", "olfactory"));
+        aliases.put("CLA", List.of("claustrum", "claustral"));
+        aliases.put("PIR", List.of("piriform cortex", "piriform", "primary olfactory", "olfactory cortex"));
 
         return aliases;
+    }
+
+    /**
+     * Get full region name from region code by looking up in database
+     * Falls back to the code itself if not found
+     *
+     * @param code The region code (e.g., "mPFC", "AMY", "DRN")
+     * @return The full region name (e.g., "Medial Prefrontal Cortex", "Amygdala")
+     */
+    public String getRegionName(String code) {
+        return brainRegionRepository.findByCode(code)
+                .map(BrainRegion::getName)
+                .orElse(code);
     }
 
     /**
@@ -467,6 +482,109 @@ public class BrainNetworkService {
     }
 
     /**
+     * Build brain graph using only connections explicitly found in research
+     * This is more accurate than buildFilteredBrainGraph as it only shows connections
+     * that were actually discussed in the research articles
+     *
+     * @param mentionedRegionCodes Set of brain region codes mentioned in research
+     * @param researchConnections Map of connections with evidence from research
+     * @return Graph with research-backed connections only
+     */
+    public Graph<String, DefaultWeightedEdge> buildGraphFromResearchConnections(
+            Set<String> mentionedRegionCodes,
+            Map<ConnectionKey, ConnectionEvidence> researchConnections) {
+
+        log.info("Building brain graph from {} research connections", researchConnections.size());
+
+        Graph<String, DefaultWeightedEdge> graph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+
+        // Load all brain regions
+        List<BrainRegion> allRegions = brainRegionRepository.findAll();
+        Map<String, BrainRegion> codeToRegion = allRegions.stream()
+                .collect(Collectors.toMap(BrainRegion::getCode, r -> r));
+
+        // Add only mentioned regions as vertices
+        for (String code : mentionedRegionCodes) {
+            BrainRegion region = codeToRegion.get(code);
+            if (region != null) {
+                graph.addVertex(region.getName());
+            } else {
+                log.warn("Region code {} mentioned in research but not found in database", code);
+            }
+        }
+
+        log.debug("Added {} vertices to graph", graph.vertexSet().size());
+
+        // Load all neural connections from database to get weights
+        List<NeuralConnection> allConnections = neuralConnectionRepository.findAll();
+        Map<String, NeuralConnection> connectionLookup = new HashMap<>();
+        for (NeuralConnection conn : allConnections) {
+            String key = conn.getSourceRegion().getCode() + "-" + conn.getTargetRegion().getCode();
+            connectionLookup.put(key, conn);
+            // Also add reverse for bidirectional
+            String reverseKey = conn.getTargetRegion().getCode() + "-" + conn.getSourceRegion().getCode();
+            connectionLookup.put(reverseKey, conn);
+        }
+
+        // Add edges ONLY for connections found in research
+        int addedEdges = 0;
+        for (Map.Entry<ConnectionKey, ConnectionEvidence> entry : researchConnections.entrySet()) {
+            ConnectionKey key = entry.getKey();
+            ConnectionEvidence evidence = entry.getValue();
+
+            // Only add edges with MEDIUM or HIGH confidence
+            if (evidence.getConfidence() == ConnectionEvidence.ConfidenceLevel.LOW) {
+                continue;
+            }
+
+            String region1Code = evidence.getSourceRegion();
+            String region2Code = evidence.getTargetRegion();
+
+            // Get the full region names
+            BrainRegion region1 = codeToRegion.get(region1Code);
+            BrainRegion region2 = codeToRegion.get(region2Code);
+
+            if (region1 != null && region2 != null) {
+                String region1Name = region1.getName();
+                String region2Name = region2.getName();
+
+                // Check if both vertices exist in graph
+                if (graph.containsVertex(region1Name) && graph.containsVertex(region2Name)) {
+                    // Look up the connection weight from our database
+                    String lookupKey = region1Code + "-" + region2Code;
+                    NeuralConnection dbConnection = connectionLookup.get(lookupKey);
+
+                    if (dbConnection != null) {
+                        // Use the baseline weight from database
+                        DefaultWeightedEdge edge = graph.addEdge(region1Name, region2Name);
+                        if (edge != null) {
+                            graph.setEdgeWeight(edge, dbConnection.getBaselineWeight());
+                            addedEdges++;
+                            log.debug("Added edge: {} - {} (confidence: {}, weight: {})",
+                                    region1Name, region2Name, evidence.getConfidence(),
+                                    dbConnection.getBaselineWeight());
+                        }
+                    } else {
+                        // Connection found in research but not in our database
+                        // Add it with a default weight
+                        DefaultWeightedEdge edge = graph.addEdge(region1Name, region2Name);
+                        if (edge != null) {
+                            graph.setEdgeWeight(edge, 0.5); // Default moderate weight
+                            addedEdges++;
+                            log.info("Added edge from research (not in DB): {} - {}", region1Name, region2Name);
+                        }
+                    }
+                }
+            }
+        }
+
+        log.info("Built research-backed brain graph with {} vertices and {} edges",
+                graph.vertexSet().size(), addedEdges);
+
+        return graph;
+    }
+
+    /**
      * Convert graph to DTO for frontend visualization
      */
     public BrainNetworkDTO convertGraphToDTO(Graph<String, DefaultWeightedEdge> graph) {
@@ -478,9 +596,36 @@ public class BrainNetworkService {
         Map<String, BrainRegion> regionMap = regions.stream()
                 .collect(Collectors.toMap(BrainRegion::getName, r -> r));
 
+        // Build a map of connections for each vertex
+        Map<String, List<String>> vertexConnections = new HashMap<>();
+        for (String vertex : graph.vertexSet()) {
+            vertexConnections.put(vertex, new ArrayList<>());
+        }
+
+        // Populate connections from edges
+        for (DefaultWeightedEdge edge : graph.edgeSet()) {
+            String source = graph.getEdgeSource(edge);
+            String target = graph.getEdgeTarget(edge);
+
+            // Add bidirectional connections
+            BrainRegion sourceRegion = regionMap.get(source);
+            BrainRegion targetRegion = regionMap.get(target);
+
+            if (sourceRegion != null && targetRegion != null) {
+                vertexConnections.get(source).add(targetRegion.getCode());
+                vertexConnections.get(target).add(sourceRegion.getCode());
+            }
+        }
+
         for (String vertex : graph.vertexSet()) {
             BrainRegion region = regionMap.get(vertex);
             if (region != null) {
+                // Get unique connected regions and sort them
+                List<String> connectedRegions = vertexConnections.get(vertex).stream()
+                        .distinct()
+                        .sorted()
+                        .collect(Collectors.toList());
+
                 nodes.add(BrainNetworkDTO.NodeDTO.builder()
                         .id(region.getId().toString())
                         .name(region.getName())
@@ -489,6 +634,7 @@ public class BrainNetworkService {
                         .positionX(region.getPositionX())
                         .positionY(region.getPositionY())
                         .activityLevel(region.getBaselineActivity())
+                        .connectedRegions(connectedRegions)
                         .build());
             }
         }
@@ -526,9 +672,73 @@ public class BrainNetworkService {
             }
         }
 
+        // Calculate network metrics
+        BrainNetworkDTO.NetworkMetricsDTO metrics = calculateNetworkMetrics(graph, edges);
+
         return BrainNetworkDTO.builder()
                 .nodes(nodes)
                 .edges(edges)
+                .metrics(metrics)
+                .build();
+    }
+
+    /**
+     * Calculate network metrics for the brain graph
+     *
+     * Network Density: Measures how interconnected the network is
+     * - Formula: (actual edges) / (possible edges)
+     * - For undirected graph: possible edges = n*(n-1)/2
+     * - Range: 0.0 (no connections) to 1.0 (fully connected)
+     * - In neuroscience: Low density = selective connections, High density = many interconnections
+     */
+    private BrainNetworkDTO.NetworkMetricsDTO calculateNetworkMetrics(
+            Graph<String, DefaultWeightedEdge> graph,
+            List<BrainNetworkDTO.EdgeDTO> edges) {
+
+        int totalNodes = graph.vertexSet().size();
+        int totalConnections = graph.edgeSet().size();
+
+        // Calculate average connection strength
+        double averageConnectionStrength = 0.0;
+        if (!edges.isEmpty()) {
+            averageConnectionStrength = edges.stream()
+                    .mapToDouble(BrainNetworkDTO.EdgeDTO::getWeight)
+                    .average()
+                    .orElse(0.0);
+        }
+
+        // Calculate network density
+        // For undirected graph: max possible edges = n * (n - 1) / 2
+        double networkDensity = 0.0;
+        if (totalNodes > 1) {
+            int maxPossibleEdges = (totalNodes * (totalNodes - 1)) / 2;
+            networkDensity = (double) totalConnections / maxPossibleEdges;
+        }
+
+        // Determine dominant pattern based on connection types
+        String dominantPattern = "Balanced";
+        if (!edges.isEmpty()) {
+            Map<String, Long> typeCount = edges.stream()
+                    .filter(e -> e.getConnectionType() != null)
+                    .collect(Collectors.groupingBy(
+                            BrainNetworkDTO.EdgeDTO::getConnectionType,
+                            Collectors.counting()
+                    ));
+
+            if (!typeCount.isEmpty()) {
+                dominantPattern = typeCount.entrySet().stream()
+                        .max(Map.Entry.comparingByValue())
+                        .map(Map.Entry::getKey)
+                        .orElse("Balanced");
+            }
+        }
+
+        return BrainNetworkDTO.NetworkMetricsDTO.builder()
+                .totalNodes(totalNodes)
+                .totalConnections(totalConnections)
+                .averageConnectionStrength(averageConnectionStrength)
+                .networkDensity(networkDensity)
+                .dominantPattern(dominantPattern)
                 .build();
     }
 

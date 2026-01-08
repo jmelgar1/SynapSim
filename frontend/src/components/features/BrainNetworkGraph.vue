@@ -22,6 +22,7 @@ const cyContainer = ref(null)  // Reference to the DOM element for Cytoscape
 const cyInstance = ref(null)   // Cytoscape instance (will be initialized in Phase 2)
 const isLoading = ref(true)
 const error = ref(null)
+const selectedNode = ref(null)  // Currently selected node data
 
 // Lifecycle hooks
 onMounted(() => {
@@ -83,6 +84,7 @@ const transformNodes = (backendNodes) => {
         activityLevel: node.activityLevel || 0,
         mentionCount: getMentionCount(node.code),
         isMentioned: isMentioned(node.code),
+        connectedRegions: node.connectedRegions || [],
         // Store raw positions for debugging
         rawPositionX: node.positionX,
         rawPositionY: node.positionY
@@ -195,35 +197,96 @@ const initializeCytoscape = async () => {
       container: cyContainer.value,
       elements: elements,
 
-      // Basic styling - VERY VISIBLE for debugging
+      // Styling matching SynapSim design system
       style: [
         {
           selector: 'node',
           style: {
-            'background-color': '#FF0000',  // BRIGHT RED for visibility
+            'background-color': '#e8eaf6',  // Soft purple-gray background
             'label': 'data(label)',
-            'color': '#000000',  // Black text
+            'color': '#2c3e50',  // Dark text matching design system
             'text-halign': 'center',
             'text-valign': 'center',
-            'font-size': '20px',  // Larger font
+            'font-size': '11px',
+            'font-weight': '600',
+            'font-family': 'Inter, sans-serif',
+            'width': 50,
+            'height': 50,
+            'border-width': 2,
+            'border-color': '#9fa8da',  // Soft purple border
+            'text-outline-width': 1,
+            'text-outline-color': '#ffffff',
+            'transition-property': 'background-color, border-color, width, height',
+            'transition-duration': '0.3s'
+          }
+        },
+        {
+          // Mentioned regions - highlighted with brand gradient colors
+          selector: 'node[isMentioned = true]',
+          style: {
+            'background-color': '#667eea',  // Brand primary color
+            'color': '#ffffff',
+            'border-color': '#764ba2',  // Brand secondary color
+            'border-width': 3,
+            'width': 60,
+            'height': 60,
+            'font-size': '12px',
             'font-weight': 'bold',
-            'width': 80,  // Larger nodes
-            'height': 80,
+            'text-outline-color': '#2c3e50',
+            'text-outline-width': 2
+          }
+        },
+        {
+          // Mentioned regions with multiple mentions - extra emphasis
+          selector: 'node[mentionCount > 1]',
+          style: {
+            'background-color': '#764ba2',  // Deeper brand color
             'border-width': 4,
-            'border-color': '#000000',  // Black border
-            'text-outline-width': 2,
-            'text-outline-color': '#FFFFFF'
+            'width': 70,
+            'height': 70,
+            'font-size': '13px'
+          }
+        },
+        {
+          // Hover state
+          selector: 'node:selected',
+          style: {
+            'border-color': '#667eea',
+            'border-width': 4,
+            'background-color': '#764ba2',
+            'color': '#ffffff'
           }
         },
         {
           selector: 'edge',
           style: {
-            'width': 5,  // Thicker edges
-            'line-color': '#0000FF',  // BRIGHT BLUE
-            'target-arrow-color': '#0000FF',
+            'width': 2,
+            'line-color': '#c5cae9',  // Soft purple-gray
+            'target-arrow-color': '#c5cae9',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            'opacity': 1
+            'opacity': 0.6,
+            'arrow-scale': 0.8
+          }
+        },
+        {
+          // Edges connected to mentioned regions
+          selector: 'edge[source][target]',
+          style: {
+            'line-color': '#9fa8da',  // Slightly darker purple
+            'target-arrow-color': '#9fa8da',
+            'opacity': 0.7,
+            'width': 2.5
+          }
+        },
+        {
+          // High weight connections
+          selector: 'edge[weight > 0.7]',
+          style: {
+            'width': 3,
+            'line-color': '#7986cb',  // More prominent purple
+            'target-arrow-color': '#7986cb',
+            'opacity': 0.85
           }
         }
       ],
@@ -273,12 +336,68 @@ const initializeCytoscape = async () => {
       console.log('Forced resize and refit')
     }, 100)
 
+    // Add node click event listener
+    cyInstance.value.on('tap', 'node', (event) => {
+      const node = event.target
+      selectedNode.value = {
+        code: node.data('code'),
+        name: node.data('name'),
+        description: node.data('description'),
+        connectedRegions: node.data('connectedRegions') || [],
+        mentionCount: node.data('mentionCount'),
+        isMentioned: node.data('isMentioned')
+      }
+      console.log('Node selected:', selectedNode.value)
+    })
+
+    // Click on background to deselect
+    cyInstance.value.on('tap', (event) => {
+      if (event.target === cyInstance.value) {
+        selectedNode.value = null
+      }
+    })
+
     isLoading.value = false
 
   } catch (err) {
     console.error('Error initializing Cytoscape:', err)
     error.value = 'Failed to initialize brain network visualization'
     isLoading.value = false
+  }
+}
+
+// Control functions
+const resetView = () => {
+  if (cyInstance.value) {
+    cyInstance.value.fit(undefined, 50)
+    cyInstance.value.zoom(1)
+    cyInstance.value.center()
+  }
+}
+
+const zoomIn = () => {
+  if (cyInstance.value) {
+    const currentZoom = cyInstance.value.zoom()
+    cyInstance.value.zoom({
+      level: currentZoom * 1.2,
+      renderedPosition: {
+        x: cyInstance.value.width() / 2,
+        y: cyInstance.value.height() / 2
+      }
+    })
+  }
+}
+
+const zoomOut = () => {
+  if (cyInstance.value) {
+    const currentZoom = cyInstance.value.zoom()
+    cyInstance.value.zoom({
+      level: currentZoom * 0.8,
+      renderedPosition: {
+        x: cyInstance.value.width() / 2,
+        y: cyInstance.value.height() / 2
+      }
+    })
   }
 }
 </script>
@@ -322,17 +441,68 @@ const initializeCytoscape = async () => {
       </div>
     </div>
 
-    <!-- Controls Panel (overlay) - Phase 5 -->
+    <!-- Controls Panel (overlay) -->
     <div v-if="!isLoading && !error" class="controls-panel">
-      <button class="control-button" title="Reset View">
+      <button class="control-button" title="Reset View" @click="resetView">
         🔄
       </button>
-      <button class="control-button" title="Zoom In">
+      <button class="control-button" title="Zoom In" @click="zoomIn">
         ➕
       </button>
-      <button class="control-button" title="Zoom Out">
+      <button class="control-button" title="Zoom Out" @click="zoomOut">
         ➖
       </button>
+    </div>
+
+    <!-- Legend Panel (bottom-left overlay) -->
+    <div v-if="!isLoading && !error" class="legend-panel">
+      <div class="legend-item">
+        <div class="legend-node mentioned"></div>
+        <span class="legend-text">Mentioned in Research</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-node multiple-mentions"></div>
+        <span class="legend-text">Multiple Mentions</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-node normal"></div>
+        <span class="legend-text">Other Regions</span>
+      </div>
+    </div>
+
+    <!-- Node Info Panel (right side, appears when node selected) -->
+    <div v-if="selectedNode" class="node-info-panel">
+      <div class="node-info-header">
+        <h3>{{ selectedNode.code }}</h3>
+        <button class="close-button" @click="selectedNode = null">✕</button>
+      </div>
+      <div class="node-info-body">
+        <div class="info-section">
+          <label class="info-label">Name</label>
+          <p class="info-value">{{ selectedNode.name }}</p>
+        </div>
+        <div class="info-section">
+          <label class="info-label">Description</label>
+          <p class="info-value">{{ selectedNode.description }}</p>
+        </div>
+        <div v-if="selectedNode.isMentioned" class="info-section">
+          <label class="info-label">Research Mentions</label>
+          <p class="info-value">{{ selectedNode.mentionCount }} time(s)</p>
+        </div>
+        <div class="info-section">
+          <label class="info-label">Connected to</label>
+          <div v-if="selectedNode.connectedRegions.length > 0" class="connected-regions">
+            <span
+              v-for="region in selectedNode.connectedRegions"
+              :key="region"
+              class="region-tag"
+            >
+              {{ region }}
+            </span>
+          </div>
+          <p v-else class="info-value">No connections in this network</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -341,7 +511,8 @@ const initializeCytoscape = async () => {
 .brain-network-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  flex: 1;
+  min-height: 400px;
   background: var(--color-background);
   border: 2px solid var(--color-border);
   border-radius: 16px;
@@ -352,7 +523,8 @@ const initializeCytoscape = async () => {
 .cytoscape-container {
   width: 100%;
   height: 100%;
-  background: #f0f0f0;  /* Light gray background for better visibility */
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%),
+              var(--color-background-soft);
 }
 
 .cytoscape-container.hidden {
@@ -492,6 +664,166 @@ const initializeCytoscape = async () => {
   transform: scale(0.95);
 }
 
+/* Legend Panel (bottom-left overlay) */
+.legend-panel {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-node {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-node.normal {
+  background-color: #e8eaf6;
+  border: 2px solid #9fa8da;
+}
+
+.legend-node.mentioned {
+  background-color: #667eea;
+  border: 2px solid #764ba2;
+}
+
+.legend-node.multiple-mentions {
+  background-color: #764ba2;
+  border: 3px solid #5e35b1;
+}
+
+.legend-text {
+  font-size: 0.75rem;
+  color: var(--color-text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Node Info Panel (right side overlay) */
+.node-info-panel {
+  position: absolute;
+  top: 1rem;
+  right: 70px;  /* Offset from control buttons */
+  width: 300px;
+  max-height: calc(100% - 2rem);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.node-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.node-info-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.close-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #667eea;
+}
+
+.node-info-body {
+  padding: 1rem;
+}
+
+.info-section {
+  margin-bottom: 1rem;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+
+.info-value {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.connected-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.region-tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .brain-network-container {
@@ -515,13 +847,26 @@ const initializeCytoscape = async () => {
     bottom: 1rem;
     right: 1rem;
   }
+
+  .node-info-panel {
+    width: calc(100% - 2rem);
+    right: 1rem;
+    max-height: 60%;
+  }
 }
 
-/* Dark mode support (if using CSS variables) */
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .metrics-panel,
-  .control-button {
+  .control-button,
+  .legend-panel,
+  .node-info-panel {
     background: rgba(30, 30, 30, 0.95);
+  }
+
+  .cytoscape-container {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%),
+                var(--color-background-soft);
   }
 }
 </style>

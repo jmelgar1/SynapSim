@@ -2,6 +2,8 @@ package com.synapsim.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.synapsim.dto.ConnectionEvidence;
+import com.synapsim.dto.ConnectionKey;
 import com.synapsim.dto.PubMedArticleDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +58,21 @@ public class PubMedService {
         this.objectMapper = new ObjectMapper();
         this.contextValidator = contextValidator;
     }
+
+    /**
+     * Keywords that indicate connectivity/relationship between brain regions
+     */
+    private static final Set<String> CONNECTIVITY_KEYWORDS = Set.of(
+            "connectivity", "connected", "connection", "connections",
+            "pathway", "pathways", "projects to", "projection", "projections",
+            "coupling", "coupled",
+            "interaction", "interactions", "interacts",
+            "modulates", "modulation", "modulated",
+            "activates", "activation", "activated",
+            "inhibits", "inhibition", "inhibited",
+            "between", "from", "to",
+            "network", "circuit", "circuitry"
+    );
 
     /**
      * Search PubMed and PMC for articles based on keywords
@@ -1025,5 +1042,109 @@ public class PubMedService {
                 mentionedRegions.size(), mentionedRegions);
 
         return mentionedRegions;
+    }
+
+    /**
+     * Extract connections between brain regions from research articles
+     * Analyzes sentence-level proximity and connectivity keywords
+     *
+     * @param articles List of PubMed articles
+     * @param mentionedRegionCodes Set of region codes that were found in research
+     * @param regionAliasMap Map of region codes to their aliases
+     * @return Map of connections with evidence
+     */
+    public Map<ConnectionKey, ConnectionEvidence> extractConnectionsFromResearch(
+            List<PubMedArticleDTO> articles,
+            Set<String> mentionedRegionCodes,
+            Map<String, List<String>> regionAliasMap) {
+
+        Map<ConnectionKey, ConnectionEvidence> connections = new HashMap<>();
+
+        if (articles == null || articles.isEmpty()) {
+            log.warn("No articles provided for connection extraction");
+            return connections;
+        }
+
+        log.info("Extracting connections from {} articles", articles.size());
+
+        for (PubMedArticleDTO article : articles) {
+            String title = article.getTitle() != null ? article.getTitle() : "";
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText() : "";
+            String fullText = title + " " + abstractText;
+
+            // Split into sentences for proximity analysis
+            String[] sentences = fullText.split("[.!?]+");
+
+            for (String sentence : sentences) {
+                String sentenceLower = sentence.toLowerCase().trim();
+                if (sentenceLower.isEmpty()) {
+                    continue;
+                }
+
+                // Find all regions mentioned in this sentence
+                List<String> regionsInSentence = new ArrayList<>();
+                for (String regionCode : mentionedRegionCodes) {
+                    List<String> aliases = regionAliasMap.get(regionCode);
+                    if (aliases != null) {
+                        for (String alias : aliases) {
+                            String regex = "\\b" + java.util.regex.Pattern.quote(alias.toLowerCase()) + "\\b";
+                            if (java.util.regex.Pattern.compile(regex).matcher(sentenceLower).find()) {
+                                regionsInSentence.add(regionCode);
+                                break; // Found this region, move to next
+                            }
+                        }
+                    }
+                }
+
+                // If we found 2+ regions in the same sentence, create connections
+                if (regionsInSentence.size() >= 2) {
+                    boolean hasConnectivityKeyword = hasConnectivityKeyword(sentenceLower);
+                    ConnectionEvidence.ConfidenceLevel confidence = hasConnectivityKeyword
+                            ? ConnectionEvidence.ConfidenceLevel.HIGH
+                            : ConnectionEvidence.ConfidenceLevel.MEDIUM;
+
+                    // Create connections for all pairs of regions in this sentence
+                    for (int i = 0; i < regionsInSentence.size(); i++) {
+                        for (int j = i + 1; j < regionsInSentence.size(); j++) {
+                            String region1 = regionsInSentence.get(i);
+                            String region2 = regionsInSentence.get(j);
+
+                            ConnectionKey key = new ConnectionKey(region1, region2);
+
+                            // Only store if this is a new connection or has higher confidence
+                            if (!connections.containsKey(key) ||
+                                    confidence.ordinal() > connections.get(key).getConfidence().ordinal()) {
+
+                                ConnectionEvidence evidence = ConnectionEvidence.builder()
+                                        .sourceRegion(region1)
+                                        .targetRegion(region2)
+                                        .confidence(confidence)
+                                        .evidenceText(sentence.trim())
+                                        .pubmedId(article.getPubmedId())
+                                        .articleTitle(article.getTitle())
+                                        .build();
+
+                                connections.put(key, evidence);
+
+                                log.debug("Found {} confidence connection: {} - {} in article {}",
+                                        confidence, region1, region2, article.getPubmedId());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        log.info("Extracted {} connections from research with evidence", connections.size());
+        return connections;
+    }
+
+    /**
+     * Check if sentence contains connectivity keywords
+     */
+    private boolean hasConnectivityKeyword(String sentence) {
+        String lowerSentence = sentence.toLowerCase();
+        return CONNECTIVITY_KEYWORDS.stream()
+                .anyMatch(keyword -> lowerSentence.contains(keyword.toLowerCase()));
     }
 }
