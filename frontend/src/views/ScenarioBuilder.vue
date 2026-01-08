@@ -191,8 +191,10 @@ const goBack = () => {
             @click="handleSubmit"
             class="forge-button"
           >
-            <span v-if="isSubmitting">⏳ Processing...</span>
-            <span v-else>🧠 Forge Pathway</span>
+            <span class="button-content">
+              <span v-if="isSubmitting" class="spinner"></span>
+              <span>{{ isSubmitting ? 'Processing...' : 'Create Simulation' }}</span>
+            </span>
           </PrimaryButton>
         </div>
       </div>
@@ -500,6 +502,26 @@ const goBack = () => {
 .forge-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Modal Styles */

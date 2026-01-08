@@ -269,11 +269,6 @@ const getConnectedRegions = (regionCode) => {
           </div>
           <p v-else class="no-data">No research references found</p>
         </div>
-
-        <!-- Actions -->
-        <div class="actions">
-          <PrimaryButton @click="goToDashboard">Return to Dashboard</PrimaryButton>
-        </div>
       </div>
     </div>
   </div>
@@ -833,13 +828,6 @@ const getConnectedRegions = (regionCode) => {
   font-style: italic;
   text-align: center;
   padding: 2rem;
-}
-
-/* Actions */
-.actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 2rem;
 }
 
 @media (max-width: 768px) {
