@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/melgar/SynapSim/.claude/hooks/session-end-update-docs.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

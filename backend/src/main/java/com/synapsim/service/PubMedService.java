@@ -2,7 +2,10 @@ package com.synapsim.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.synapsim.dto.ConnectionEvidence;
+import com.synapsim.dto.ConnectionKey;
 import com.synapsim.dto.PubMedArticleDTO;
+import com.synapsim.model.Scenario;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -56,6 +59,45 @@ public class PubMedService {
         this.objectMapper = new ObjectMapper();
         this.contextValidator = contextValidator;
     }
+
+    /**
+     * Keywords that indicate connectivity/relationship between brain regions
+     */
+    private static final Set<String> CONNECTIVITY_KEYWORDS = Set.of(
+            "connectivity", "connected", "connection", "connections",
+            "pathway", "pathways", "projects to", "projection", "projections",
+            "coupling", "coupled",
+            "interaction", "interactions", "interacts",
+            "modulates", "modulation", "modulated",
+            "activates", "activation", "activated",
+            "inhibits", "inhibition", "inhibited",
+            "between", "from", "to",
+            "network", "circuit", "circuitry"
+    );
+
+    /**
+     * Keywords to ADD to PubMed search query for each research focus (1-2 terms per focus)
+     */
+    private static final Map<Scenario.ResearchFocus, List<String>> FOCUS_SEARCH_KEYWORDS = Map.of(
+            Scenario.ResearchFocus.ANXIETY_FEAR, List.of("anxiety"),
+            Scenario.ResearchFocus.DEPRESSION_MOOD, List.of("depression"),
+            Scenario.ResearchFocus.TRAUMA_PTSD, List.of("ptsd", "trauma"),
+            Scenario.ResearchFocus.ADDICTION_CRAVING, List.of("addiction"),
+            Scenario.ResearchFocus.SOCIAL_EMPATHY, List.of("empathy", "social"),
+            Scenario.ResearchFocus.MINDFULNESS_AWARENESS, List.of("meditation")
+    );
+
+    /**
+     * Keywords for post-fetch relevance boosting (broader set)
+     */
+    private static final Map<Scenario.ResearchFocus, Set<String>> FOCUS_BOOST_KEYWORDS = Map.of(
+            Scenario.ResearchFocus.ANXIETY_FEAR, Set.of("anxiety", "fear", "stress", "panic", "phobia", "anxious", "worry"),
+            Scenario.ResearchFocus.DEPRESSION_MOOD, Set.of("depression", "mood", "antidepressant", "depressive", "sadness", "anhedonia"),
+            Scenario.ResearchFocus.TRAUMA_PTSD, Set.of("trauma", "ptsd", "post-traumatic", "traumatic", "memory", "flashback"),
+            Scenario.ResearchFocus.ADDICTION_CRAVING, Set.of("addiction", "craving", "substance", "dependence", "reward", "withdrawal"),
+            Scenario.ResearchFocus.SOCIAL_EMPATHY, Set.of("social", "empathy", "empathic", "connection", "bonding", "oxytocin", "prosocial"),
+            Scenario.ResearchFocus.MINDFULNESS_AWARENESS, Set.of("meditation", "mindfulness", "awareness", "consciousness", "contemplative", "attention")
+    );
 
     /**
      * Search PubMed and PMC for articles based on keywords
@@ -338,7 +380,8 @@ public class PubMedService {
     /**
      * Generate search keywords based on scenario parameters
      */
-    public List<String> generateSearchKeywords(String compoundType, String therapeuticSetting, String brainRegion) {
+    public List<String> generateSearchKeywords(String compoundType, String therapeuticSetting,
+            String brainRegion, Scenario.ResearchFocus researchFocus) {
         List<String> keywords = new ArrayList<>();
 
         // Add compound-related keywords
@@ -363,8 +406,64 @@ public class PubMedService {
         keywords.add("brain");
         keywords.add("connectivity");
 
-        log.debug("Generated keywords (brain region excluded): {}", keywords);
+        // Add research focus keywords if selected
+        if (researchFocus != null) {
+            List<String> focusKeywords = FOCUS_SEARCH_KEYWORDS.get(researchFocus);
+            if (focusKeywords != null) {
+                keywords.addAll(focusKeywords);
+                log.debug("Added research focus keywords: {}", focusKeywords);
+            }
+        }
+
+        log.debug("Generated keywords: {}", keywords);
         return keywords;
+    }
+
+    /**
+     * Boost article relevance scores based on research focus keywords.
+     * ONLY called when researchFocus is not null.
+     */
+    public List<PubMedArticleDTO> boostByResearchFocus(
+            List<PubMedArticleDTO> articles,
+            Scenario.ResearchFocus focus) {
+
+        Set<String> boostKeywords = FOCUS_BOOST_KEYWORDS.get(focus);
+        if (boostKeywords == null || articles.isEmpty()) {
+            return articles;
+        }
+
+        log.info("Boosting articles by research focus: {}", focus);
+
+        return articles.stream()
+                .map(article -> {
+                    double focusBoost = calculateFocusBoost(article, boostKeywords);
+                    double newScore = Math.min(1.0, article.getRelevanceScore() + focusBoost);
+                    article.setRelevanceScore(newScore);
+                    return article;
+                })
+                .sorted((a, b) -> Double.compare(b.getRelevanceScore(), a.getRelevanceScore()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate boost based on focus keyword matches in title and abstract
+     */
+    private double calculateFocusBoost(PubMedArticleDTO article, Set<String> focusKeywords) {
+        String title = article.getTitle() != null ? article.getTitle().toLowerCase() : "";
+        String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+        String combined = title + " " + abstractText;
+
+        int matches = 0;
+        for (String keyword : focusKeywords) {
+            if (combined.contains(keyword.toLowerCase())) {
+                matches++;
+                if (title.contains(keyword.toLowerCase())) {
+                    matches++;  // Extra boost for title matches
+                }
+            }
+        }
+
+        return Math.min(0.25, matches * 0.05);  // Max 0.25 boost
     }
 
     /**
@@ -1025,5 +1124,109 @@ public class PubMedService {
                 mentionedRegions.size(), mentionedRegions);
 
         return mentionedRegions;
+    }
+
+    /**
+     * Extract connections between brain regions from research articles
+     * Analyzes sentence-level proximity and connectivity keywords
+     *
+     * @param articles List of PubMed articles
+     * @param mentionedRegionCodes Set of region codes that were found in research
+     * @param regionAliasMap Map of region codes to their aliases
+     * @return Map of connections with evidence
+     */
+    public Map<ConnectionKey, ConnectionEvidence> extractConnectionsFromResearch(
+            List<PubMedArticleDTO> articles,
+            Set<String> mentionedRegionCodes,
+            Map<String, List<String>> regionAliasMap) {
+
+        Map<ConnectionKey, ConnectionEvidence> connections = new HashMap<>();
+
+        if (articles == null || articles.isEmpty()) {
+            log.warn("No articles provided for connection extraction");
+            return connections;
+        }
+
+        log.info("Extracting connections from {} articles", articles.size());
+
+        for (PubMedArticleDTO article : articles) {
+            String title = article.getTitle() != null ? article.getTitle() : "";
+            String abstractText = article.getAbstractText() != null ? article.getAbstractText() : "";
+            String fullText = title + " " + abstractText;
+
+            // Split into sentences for proximity analysis
+            String[] sentences = fullText.split("[.!?]+");
+
+            for (String sentence : sentences) {
+                String sentenceLower = sentence.toLowerCase().trim();
+                if (sentenceLower.isEmpty()) {
+                    continue;
+                }
+
+                // Find all regions mentioned in this sentence
+                List<String> regionsInSentence = new ArrayList<>();
+                for (String regionCode : mentionedRegionCodes) {
+                    List<String> aliases = regionAliasMap.get(regionCode);
+                    if (aliases != null) {
+                        for (String alias : aliases) {
+                            String regex = "\\b" + java.util.regex.Pattern.quote(alias.toLowerCase()) + "\\b";
+                            if (java.util.regex.Pattern.compile(regex).matcher(sentenceLower).find()) {
+                                regionsInSentence.add(regionCode);
+                                break; // Found this region, move to next
+                            }
+                        }
+                    }
+                }
+
+                // If we found 2+ regions in the same sentence, create connections
+                if (regionsInSentence.size() >= 2) {
+                    boolean hasConnectivityKeyword = hasConnectivityKeyword(sentenceLower);
+                    ConnectionEvidence.ConfidenceLevel confidence = hasConnectivityKeyword
+                            ? ConnectionEvidence.ConfidenceLevel.HIGH
+                            : ConnectionEvidence.ConfidenceLevel.MEDIUM;
+
+                    // Create connections for all pairs of regions in this sentence
+                    for (int i = 0; i < regionsInSentence.size(); i++) {
+                        for (int j = i + 1; j < regionsInSentence.size(); j++) {
+                            String region1 = regionsInSentence.get(i);
+                            String region2 = regionsInSentence.get(j);
+
+                            ConnectionKey key = new ConnectionKey(region1, region2);
+
+                            // Only store if this is a new connection or has higher confidence
+                            if (!connections.containsKey(key) ||
+                                    confidence.ordinal() > connections.get(key).getConfidence().ordinal()) {
+
+                                ConnectionEvidence evidence = ConnectionEvidence.builder()
+                                        .sourceRegion(region1)
+                                        .targetRegion(region2)
+                                        .confidence(confidence)
+                                        .evidenceText(sentence.trim())
+                                        .pubmedId(article.getPubmedId())
+                                        .articleTitle(article.getTitle())
+                                        .build();
+
+                                connections.put(key, evidence);
+
+                                log.debug("Found {} confidence connection: {} - {} in article {}",
+                                        confidence, region1, region2, article.getPubmedId());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        log.info("Extracted {} connections from research with evidence", connections.size());
+        return connections;
+    }
+
+    /**
+     * Check if sentence contains connectivity keywords
+     */
+    private boolean hasConnectivityKeyword(String sentence) {
+        String lowerSentence = sentence.toLowerCase();
+        return CONNECTIVITY_KEYWORDS.stream()
+                .anyMatch(keyword -> lowerSentence.contains(keyword.toLowerCase()));
     }
 }

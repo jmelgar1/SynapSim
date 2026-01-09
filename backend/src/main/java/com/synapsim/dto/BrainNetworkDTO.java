@@ -34,6 +34,7 @@ public class BrainNetworkDTO {
         private Double positionY;
         private String color;
         private Integer size;
+        private List<String> connectedRegions;  // List of connected region codes
     }
 
     @Data

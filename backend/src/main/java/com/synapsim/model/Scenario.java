@@ -38,6 +38,10 @@ public class Scenario {
     @Column(name = "simulation_duration")
     private SimulationDuration simulationDuration;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "research_focus")
+    private ResearchFocus researchFocus;
+
     @Column(name = "integration_steps", length = 1000)
     private String integrationSteps;
 
@@ -92,6 +96,25 @@ public class Scenario {
         private final String value;
 
         SimulationDuration(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+    public enum ResearchFocus {
+        ANXIETY_FEAR("anxiety-fear"),
+        DEPRESSION_MOOD("depression-mood"),
+        TRAUMA_PTSD("trauma-ptsd"),
+        ADDICTION_CRAVING("addiction-craving"),
+        SOCIAL_EMPATHY("social-empathy"),
+        MINDFULNESS_AWARENESS("mindfulness-awareness");
+
+        private final String value;
+
+        ResearchFocus(String value) {
             this.value = value;
         }
 
