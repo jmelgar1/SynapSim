@@ -6,6 +6,7 @@ import { simulationService } from '@/services/simulation'
 import {
   COMPOUND_INSPIRATIONS,
   THERAPEUTIC_SETTINGS,
+  RESEARCH_FOCUS,
   QUESTS,
 } from '@/constants'
 
@@ -20,6 +21,7 @@ const quest = QUESTS.find((q) => q.id === questId)
 const scenario = ref({
   compoundInspiration: null,
   therapeuticSetting: null,
+  researchFocus: null, // Optional
 })
 
 // Loading state
@@ -58,6 +60,7 @@ const handleSubmit = async () => {
       questId: questId,
       compoundInspiration: scenario.value.compoundInspiration,
       therapeuticSetting: scenario.value.therapeuticSetting,
+      researchFocus: scenario.value.researchFocus, // Optional
       integrationSteps: null, // Optional field
     }
 
@@ -176,6 +179,36 @@ const goBack = () => {
               <p class="option-description">{{ option.description }}</p>
             </div>
           </div>
+        </div>
+
+        <!-- Research Focus (Optional) -->
+        <div class="form-group">
+          <label class="form-label">
+            Research Focus
+            <span class="optional-badge">Optional</span>
+            <span class="info-wrapper" @mouseenter="showTooltip('focus')" @mouseleave="hideTooltip">
+              <span class="info-icon">ⓘ</span>
+              <div v-if="activeTooltip === 'focus'" class="tooltip">
+                <span>Optionally focus your simulation on a specific therapeutic area. This will prioritize research articles and brain pathways related to your chosen focus. Leave unselected for a general exploration.</span>
+              </div>
+            </span>
+          </label>
+          <div class="options-grid focus-grid">
+            <div
+              v-for="option in RESEARCH_FOCUS"
+              :key="option.value"
+              class="option-card focus-card"
+              :class="{ selected: scenario.researchFocus === option.value }"
+              @click="scenario.researchFocus = scenario.researchFocus === option.value ? null : option.value"
+            >
+              <div class="focus-icon">{{ option.icon }}</div>
+              <h4>{{ option.label }}</h4>
+              <p class="option-description">{{ option.description }}</p>
+            </div>
+          </div>
+          <p v-if="scenario.researchFocus" class="focus-hint">
+            Click again to deselect
+          </p>
         </div>
 
         <!-- Error Message -->
@@ -386,7 +419,7 @@ const goBack = () => {
 /* Options Grid */
 .options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
@@ -397,6 +430,10 @@ const goBack = () => {
   cursor: pointer;
   transition: all 0.2s ease;
   background: var(--color-background-soft);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .option-card:hover {
@@ -406,9 +443,64 @@ const goBack = () => {
 }
 
 .option-card.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  /* Glass window pane effect */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.option-card.selected > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Glass shine/reflection effect - diagonal slant */
+.option-card.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.15) 45%,
+    transparent 50%,
+    transparent 100%
+  );
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+/* Corner light highlights */
+.option-card.selected::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .option-header h4 {
@@ -427,18 +519,66 @@ const goBack = () => {
 
 .setting-card {
   text-align: center;
+  min-height: 140px;
 }
 
 .setting-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .setting-card h4 {
   margin: 0 0 0.5rem 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-heading);
+}
+
+/* Research Focus Cards */
+.optional-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--color-background-soft);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.focus-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.focus-card {
+  text-align: center;
+  min-height: 140px;
+}
+
+.focus-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.focus-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.focus-card .option-description {
+  font-size: 0.8rem;
+}
+
+.focus-hint {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  font-style: italic;
+  text-align: center;
 }
 
 /* Textarea */

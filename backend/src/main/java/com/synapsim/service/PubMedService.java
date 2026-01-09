@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.synapsim.dto.ConnectionEvidence;
 import com.synapsim.dto.ConnectionKey;
 import com.synapsim.dto.PubMedArticleDTO;
+import com.synapsim.model.Scenario;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,30 @@ public class PubMedService {
             "inhibits", "inhibition", "inhibited",
             "between", "from", "to",
             "network", "circuit", "circuitry"
+    );
+
+    /**
+     * Keywords to ADD to PubMed search query for each research focus (1-2 terms per focus)
+     */
+    private static final Map<Scenario.ResearchFocus, List<String>> FOCUS_SEARCH_KEYWORDS = Map.of(
+            Scenario.ResearchFocus.ANXIETY_FEAR, List.of("anxiety"),
+            Scenario.ResearchFocus.DEPRESSION_MOOD, List.of("depression"),
+            Scenario.ResearchFocus.TRAUMA_PTSD, List.of("ptsd", "trauma"),
+            Scenario.ResearchFocus.ADDICTION_CRAVING, List.of("addiction"),
+            Scenario.ResearchFocus.SOCIAL_EMPATHY, List.of("empathy", "social"),
+            Scenario.ResearchFocus.MINDFULNESS_AWARENESS, List.of("meditation")
+    );
+
+    /**
+     * Keywords for post-fetch relevance boosting (broader set)
+     */
+    private static final Map<Scenario.ResearchFocus, Set<String>> FOCUS_BOOST_KEYWORDS = Map.of(
+            Scenario.ResearchFocus.ANXIETY_FEAR, Set.of("anxiety", "fear", "stress", "panic", "phobia", "anxious", "worry"),
+            Scenario.ResearchFocus.DEPRESSION_MOOD, Set.of("depression", "mood", "antidepressant", "depressive", "sadness", "anhedonia"),
+            Scenario.ResearchFocus.TRAUMA_PTSD, Set.of("trauma", "ptsd", "post-traumatic", "traumatic", "memory", "flashback"),
+            Scenario.ResearchFocus.ADDICTION_CRAVING, Set.of("addiction", "craving", "substance", "dependence", "reward", "withdrawal"),
+            Scenario.ResearchFocus.SOCIAL_EMPATHY, Set.of("social", "empathy", "empathic", "connection", "bonding", "oxytocin", "prosocial"),
+            Scenario.ResearchFocus.MINDFULNESS_AWARENESS, Set.of("meditation", "mindfulness", "awareness", "consciousness", "contemplative", "attention")
     );
 
     /**
@@ -355,7 +380,8 @@ public class PubMedService {
     /**
      * Generate search keywords based on scenario parameters
      */
-    public List<String> generateSearchKeywords(String compoundType, String therapeuticSetting, String brainRegion) {
+    public List<String> generateSearchKeywords(String compoundType, String therapeuticSetting,
+            String brainRegion, Scenario.ResearchFocus researchFocus) {
         List<String> keywords = new ArrayList<>();
 
         // Add compound-related keywords
@@ -380,8 +406,64 @@ public class PubMedService {
         keywords.add("brain");
         keywords.add("connectivity");
 
-        log.debug("Generated keywords (brain region excluded): {}", keywords);
+        // Add research focus keywords if selected
+        if (researchFocus != null) {
+            List<String> focusKeywords = FOCUS_SEARCH_KEYWORDS.get(researchFocus);
+            if (focusKeywords != null) {
+                keywords.addAll(focusKeywords);
+                log.debug("Added research focus keywords: {}", focusKeywords);
+            }
+        }
+
+        log.debug("Generated keywords: {}", keywords);
         return keywords;
+    }
+
+    /**
+     * Boost article relevance scores based on research focus keywords.
+     * ONLY called when researchFocus is not null.
+     */
+    public List<PubMedArticleDTO> boostByResearchFocus(
+            List<PubMedArticleDTO> articles,
+            Scenario.ResearchFocus focus) {
+
+        Set<String> boostKeywords = FOCUS_BOOST_KEYWORDS.get(focus);
+        if (boostKeywords == null || articles.isEmpty()) {
+            return articles;
+        }
+
+        log.info("Boosting articles by research focus: {}", focus);
+
+        return articles.stream()
+                .map(article -> {
+                    double focusBoost = calculateFocusBoost(article, boostKeywords);
+                    double newScore = Math.min(1.0, article.getRelevanceScore() + focusBoost);
+                    article.setRelevanceScore(newScore);
+                    return article;
+                })
+                .sorted((a, b) -> Double.compare(b.getRelevanceScore(), a.getRelevanceScore()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate boost based on focus keyword matches in title and abstract
+     */
+    private double calculateFocusBoost(PubMedArticleDTO article, Set<String> focusKeywords) {
+        String title = article.getTitle() != null ? article.getTitle().toLowerCase() : "";
+        String abstractText = article.getAbstractText() != null ? article.getAbstractText().toLowerCase() : "";
+        String combined = title + " " + abstractText;
+
+        int matches = 0;
+        for (String keyword : focusKeywords) {
+            if (combined.contains(keyword.toLowerCase())) {
+                matches++;
+                if (title.contains(keyword.toLowerCase())) {
+                    matches++;  // Extra boost for title matches
+                }
+            }
+        }
+
+        return Math.min(0.25, matches * 0.05);  // Max 0.25 boost
     }
 
     /**

@@ -26,6 +26,9 @@ public class ScenarioRequest {
 
     private String integrationSteps;
 
+    // Optional research focus
+    private String researchFocus;
+
     // Helper method to convert string to enum
     public Scenario.CompoundType getCompoundType() {
         return Scenario.CompoundType.valueOf(compoundInspiration.toUpperCase().replace("-", "_"));
@@ -33,5 +36,13 @@ public class ScenarioRequest {
 
     public Scenario.TherapeuticSetting getSettingType() {
         return Scenario.TherapeuticSetting.valueOf(therapeuticSetting.toUpperCase().replace("-", "_"));
+    }
+
+    // Helper method for research focus (returns null if not set)
+    public Scenario.ResearchFocus getResearchFocusType() {
+        if (researchFocus == null || researchFocus.isEmpty()) {
+            return null;
+        }
+        return Scenario.ResearchFocus.valueOf(researchFocus.toUpperCase().replace("-", "_"));
     }
 }

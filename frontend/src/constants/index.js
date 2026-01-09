@@ -53,23 +53,23 @@ export const API_ENDPOINTS = {
 export const COMPOUND_INSPIRATIONS = [
   {
     value: 'psilocybin',
-    label: 'Psilocybin-like (research-based)',
-    description: 'Inspired by psilocybin studies showing enhanced neural connectivity and neuroplasticity.',
+    label: 'Psilocybin',
+    description: 'Enhanced neural connectivity and neuroplasticity.',
   },
   {
     value: 'lsd',
-    label: 'LSD-inspired (therapeutic)',
-    description: 'Based on LSD research demonstrating increased brain network integration.',
+    label: 'LSD',
+    description: 'Increased brain network integration.',
   },
   {
     value: 'ketamine',
-    label: 'Ketamine-inspired (rapid-acting)',
-    description: 'Modeled after ketamine studies showing rapid synaptogenesis and mood effects.',
+    label: 'Ketamine',
+    description: 'Rapid synaptogenesis and mood effects.',
   },
   {
     value: 'mdma',
-    label: 'MDMA-inspired (empathogenic)',
-    description: 'Inspired by MDMA research on social bonding and emotional processing.',
+    label: 'MDMA',
+    description: 'Social bonding and emotional processing.',
   },
 ]
 
@@ -77,32 +77,72 @@ export const THERAPEUTIC_SETTINGS = [
   {
     value: 'calm-nature',
     label: 'Calm Nature',
-    description: 'Peaceful outdoor environment promoting relaxation and introspection.',
+    description: 'Peaceful outdoor relaxation and introspection.',
     icon: '🌿',
   },
   {
     value: 'guided-therapy',
-    label: 'Guided Therapy Room',
-    description: 'Professional therapeutic setting with expert support.',
+    label: 'Guided Therapy',
+    description: 'Professional therapeutic setting with support.',
     icon: '🏥',
   },
   {
     value: 'meditation-space',
     label: 'Meditation Space',
-    description: 'Quiet, minimalist environment designed for mindfulness.',
+    description: 'Quiet environment designed for mindfulness.',
     icon: '🧘',
   },
   {
     value: 'creative-studio',
     label: 'Creative Studio',
-    description: 'Inspiring artistic environment encouraging creative expression.',
+    description: 'Artistic environment for creative expression.',
     icon: '🎨',
   },
   {
     value: 'social-gathering',
     label: 'Social Gathering',
-    description: 'Warm, communal setting fostering connection and empathy.',
+    description: 'Communal setting fostering connection and empathy.',
     icon: '👥',
+  },
+]
+
+// Research Focus Options (optional therapeutic goals)
+export const RESEARCH_FOCUS = [
+  {
+    value: 'anxiety-fear',
+    label: 'Anxiety & Fear',
+    description: 'Anxiety reduction and fear processing research.',
+    icon: '😰',
+  },
+  {
+    value: 'depression-mood',
+    label: 'Depression & Mood',
+    description: 'Mood enhancement and depression studies.',
+    icon: '🌧️',
+  },
+  {
+    value: 'trauma-ptsd',
+    label: 'Trauma & PTSD',
+    description: 'Trauma processing and PTSD treatment research.',
+    icon: '🩹',
+  },
+  {
+    value: 'addiction-craving',
+    label: 'Addiction & Craving',
+    description: 'Addiction and craving reduction studies.',
+    icon: '🔗',
+  },
+  {
+    value: 'social-empathy',
+    label: 'Social & Empathy',
+    description: 'Social bonding and empathy enhancement research.',
+    icon: '🤝',
+  },
+  {
+    value: 'mindfulness-awareness',
+    label: 'Mindfulness',
+    description: 'Meditation and consciousness studies.',
+    icon: '🧘',
   },
 ]
 

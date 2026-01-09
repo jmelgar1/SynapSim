@@ -217,6 +217,7 @@ public class SimulationService {
         scenario.setCompoundInspiration(request.getCompoundType());
         scenario.setTherapeuticSetting(request.getSettingType());
         scenario.setPrimaryBrainRegion(request.getPrimaryBrainRegion());
+        scenario.setResearchFocus(request.getResearchFocusType()); // Optional - can be null
         scenario.setIntegrationSteps(request.getIntegrationSteps());
         return scenario;
     }
@@ -227,14 +228,22 @@ public class SimulationService {
     private List<PubMedArticleDTO> searchRelevantResearch(Scenario scenario) {
         log.info("Searching PubMed for relevant research");
 
+        // Pass research focus to keyword generation (can be null)
         List<String> keywords = pubMedService.generateSearchKeywords(
                 scenario.getCompoundInspiration().getValue(),
                 scenario.getTherapeuticSetting().getValue(),
-                scenario.getPrimaryBrainRegion()
+                scenario.getPrimaryBrainRegion(),
+                scenario.getResearchFocus()
         );
 
         List<PubMedArticleDTO> articles = pubMedService.searchArticles(keywords);
         log.info("Found {} relevant articles", articles.size());
+
+        // Apply research focus boost ONLY if focus is selected
+        if (scenario.getResearchFocus() != null) {
+            articles = pubMedService.boostByResearchFocus(articles, scenario.getResearchFocus());
+            log.info("Applied research focus boost for: {}", scenario.getResearchFocus());
+        }
 
         return articles;
     }

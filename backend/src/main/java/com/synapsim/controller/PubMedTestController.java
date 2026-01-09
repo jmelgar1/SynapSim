@@ -70,8 +70,8 @@ public class PubMedTestController {
         log.info("Searching PubMed with scenario: compound={}, setting={}, region={}",
                 compound, setting, region);
 
-        // Generate keywords from scenario
-        List<String> keywords = pubMedService.generateSearchKeywords(compound, setting, region);
+        // Generate keywords from scenario (null for researchFocus in test endpoint)
+        List<String> keywords = pubMedService.generateSearchKeywords(compound, setting, region, null);
 
         // Search articles
         List<PubMedArticleDTO> articles = pubMedService.searchArticles(keywords);
