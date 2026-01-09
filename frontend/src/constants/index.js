@@ -55,21 +55,25 @@ export const COMPOUND_INSPIRATIONS = [
     value: 'psilocybin',
     label: 'Psilocybin',
     description: 'Enhanced neural connectivity and neuroplasticity.',
+    icon: '🍄',
   },
   {
     value: 'lsd',
     label: 'LSD',
     description: 'Increased brain network integration.',
+    icon: '🌀',
   },
   {
     value: 'ketamine',
     label: 'Ketamine',
     description: 'Rapid synaptogenesis and mood effects.',
+    icon: '💉',
   },
   {
     value: 'mdma',
     label: 'MDMA',
     description: 'Social bonding and emotional processing.',
+    icon: '✨',
   },
 ]
 

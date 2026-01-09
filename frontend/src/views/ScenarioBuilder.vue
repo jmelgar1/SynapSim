@@ -143,13 +143,12 @@ const goBack = () => {
             <div
               v-for="option in COMPOUND_INSPIRATIONS"
               :key="option.value"
-              class="option-card"
+              class="option-card compound-card"
               :class="{ selected: scenario.compoundInspiration === option.value }"
               @click="scenario.compoundInspiration = option.value"
             >
-              <div class="option-header">
-                <h4>{{ option.label }}</h4>
-              </div>
+              <div class="compound-icon">{{ option.icon }}</div>
+              <h4>{{ option.label }}</h4>
               <p class="option-description">{{ option.description }}</p>
             </div>
           </div>
@@ -517,6 +516,25 @@ const goBack = () => {
   line-height: 1.5;
 }
 
+/* Compound Cards */
+.compound-card {
+  text-align: center;
+  min-height: 140px;
+}
+
+.compound-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.compound-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+/* Setting Cards */
 .setting-card {
   text-align: center;
   min-height: 140px;
