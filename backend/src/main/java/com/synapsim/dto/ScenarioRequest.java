@@ -24,10 +24,10 @@ public class ScenarioRequest {
 
     private String primaryBrainRegion;
 
-    @NotNull(message = "Simulation duration is required")
-    private String simulationDuration;
-
     private String integrationSteps;
+
+    // Optional research focus
+    private String researchFocus;
 
     // Helper method to convert string to enum
     public Scenario.CompoundType getCompoundType() {
@@ -38,7 +38,11 @@ public class ScenarioRequest {
         return Scenario.TherapeuticSetting.valueOf(therapeuticSetting.toUpperCase().replace("-", "_"));
     }
 
-    public Scenario.SimulationDuration getDurationType() {
-        return Scenario.SimulationDuration.valueOf(simulationDuration.toUpperCase());
+    // Helper method for research focus (returns null if not set)
+    public Scenario.ResearchFocus getResearchFocusType() {
+        if (researchFocus == null || researchFocus.isEmpty()) {
+            return null;
+        }
+        return Scenario.ResearchFocus.valueOf(researchFocus.toUpperCase().replace("-", "_"));
     }
 }

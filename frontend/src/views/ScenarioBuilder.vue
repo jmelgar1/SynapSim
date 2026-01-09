@@ -6,8 +6,7 @@ import { simulationService } from '@/services/simulation'
 import {
   COMPOUND_INSPIRATIONS,
   THERAPEUTIC_SETTINGS,
-  BRAIN_REGIONS,
-  SIMULATION_DURATIONS,
+  RESEARCH_FOCUS,
   QUESTS,
 } from '@/constants'
 
@@ -22,8 +21,7 @@ const quest = QUESTS.find((q) => q.id === questId)
 const scenario = ref({
   compoundInspiration: null,
   therapeuticSetting: null,
-  primaryBrainRegion: null,
-  simulationDuration: null,
+  researchFocus: null, // Optional
 })
 
 // Loading state
@@ -35,9 +33,7 @@ const showNoResearchModal = ref(false)
 const isFormValid = computed(() => {
   return (
     scenario.value.compoundInspiration &&
-    scenario.value.therapeuticSetting &&
-    scenario.value.primaryBrainRegion &&
-    scenario.value.simulationDuration
+    scenario.value.therapeuticSetting
   )
 })
 
@@ -64,8 +60,7 @@ const handleSubmit = async () => {
       questId: questId,
       compoundInspiration: scenario.value.compoundInspiration,
       therapeuticSetting: scenario.value.therapeuticSetting,
-      primaryBrainRegion: scenario.value.primaryBrainRegion,
-      simulationDuration: scenario.value.simulationDuration,
+      researchFocus: scenario.value.researchFocus, // Optional
       integrationSteps: null, // Optional field
     }
 
@@ -186,48 +181,34 @@ const goBack = () => {
           </div>
         </div>
 
-        <!-- Primary Brain Region -->
+        <!-- Research Focus (Optional) -->
         <div class="form-group">
           <label class="form-label">
-            Primary Brain Region
-            <span class="info-wrapper" @mouseenter="showTooltip('brain')" @mouseleave="hideTooltip">
+            Research Focus
+            <span class="optional-badge">Optional</span>
+            <span class="info-wrapper" @mouseenter="showTooltip('focus')" @mouseleave="hideTooltip">
               <span class="info-icon">ⓘ</span>
-              <div v-if="activeTooltip === 'brain'" class="tooltip">
-                <span>Focus on a specific brain region to see targeted effects. The Amygdala processes fear/anxiety, Prefrontal Cortex handles decision-making, Hippocampus manages memory, and the Default Mode Network controls self-referential thinking. This helps personalize the simulation to your interests.</span>
+              <div v-if="activeTooltip === 'focus'" class="tooltip">
+                <span>Optionally focus your simulation on a specific therapeutic area. This will prioritize research articles and brain pathways related to your chosen focus. Leave unselected for a general exploration.</span>
               </div>
             </span>
           </label>
-          <select v-model="scenario.primaryBrainRegion" class="form-select">
-            <option :value="null" disabled>Select a brain region</option>
-            <option v-for="region in BRAIN_REGIONS" :key="region.value" :value="region.value">
-              {{ region.label }} - {{ region.description }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Simulation Duration -->
-        <div class="form-group">
-          <label class="form-label">
-            Simulation Duration
-            <span class="info-wrapper" @mouseenter="showTooltip('duration')" @mouseleave="hideTooltip">
-              <span class="info-icon">ⓘ</span>
-              <div v-if="activeTooltip === 'duration'" class="tooltip">
-                <span>Duration affects neuroplastic depth. Short sessions (3-5 hours) show acute connectivity changes, Medium (6-8 hours) allows for deeper network reorganization, and Extended (8+ hours) simulates profound rewiring with lasting integration potential. Longer isn't always better—it depends on your learning goals.</span>
-              </div>
-            </span>
-          </label>
-          <div class="duration-options">
+          <div class="options-grid focus-grid">
             <div
-              v-for="duration in SIMULATION_DURATIONS"
-              :key="duration.value"
-              class="duration-card"
-              :class="{ selected: scenario.simulationDuration === duration.value }"
-              @click="scenario.simulationDuration = duration.value"
+              v-for="option in RESEARCH_FOCUS"
+              :key="option.value"
+              class="option-card focus-card"
+              :class="{ selected: scenario.researchFocus === option.value }"
+              @click="scenario.researchFocus = scenario.researchFocus === option.value ? null : option.value"
             >
-              <h4>{{ duration.label }}</h4>
-              <p>{{ duration.description }}</p>
+              <div class="focus-icon">{{ option.icon }}</div>
+              <h4>{{ option.label }}</h4>
+              <p class="option-description">{{ option.description }}</p>
             </div>
           </div>
+          <p v-if="scenario.researchFocus" class="focus-hint">
+            Click again to deselect
+          </p>
         </div>
 
         <!-- Error Message -->
@@ -243,8 +224,10 @@ const goBack = () => {
             @click="handleSubmit"
             class="forge-button"
           >
-            <span v-if="isSubmitting">⏳ Processing...</span>
-            <span v-else>🧠 Forge Pathway</span>
+            <span class="button-content">
+              <span v-if="isSubmitting" class="spinner"></span>
+              <span>{{ isSubmitting ? 'Processing...' : 'Create Simulation' }}</span>
+            </span>
           </PrimaryButton>
         </div>
       </div>
@@ -436,7 +419,7 @@ const goBack = () => {
 /* Options Grid */
 .options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
@@ -447,6 +430,10 @@ const goBack = () => {
   cursor: pointer;
   transition: all 0.2s ease;
   background: var(--color-background-soft);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .option-card:hover {
@@ -456,9 +443,64 @@ const goBack = () => {
 }
 
 .option-card.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  /* Glass window pane effect */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.option-card.selected > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Glass shine/reflection effect - diagonal slant */
+.option-card.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.15) 45%,
+    transparent 50%,
+    transparent 100%
+  );
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+/* Corner light highlights */
+.option-card.selected::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .option-header h4 {
@@ -477,77 +519,66 @@ const goBack = () => {
 
 .setting-card {
   text-align: center;
+  min-height: 140px;
 }
 
 .setting-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .setting-card h4 {
   margin: 0 0 0.5rem 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-heading);
 }
 
-/* Select */
-.form-select {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-background);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.form-select:hover,
-.form-select:focus {
-  border-color: #667eea;
-  outline: none;
-}
-
-/* Duration Options */
-.duration-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.duration-card {
-  padding: 1.25rem;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
+/* Research Focus Cards */
+.optional-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
   background: var(--color-background-soft);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.duration-card:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
+.focus-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.duration-card.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+.focus-card {
+  text-align: center;
+  min-height: 140px;
 }
 
-.duration-card h4 {
-  margin: 0 0 0.25rem 0;
+.focus-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.focus-card h4 {
+  margin: 0 0 0.5rem 0;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-heading);
 }
 
-.duration-card p {
-  margin: 0;
+.focus-card .option-description {
+  font-size: 0.8rem;
+}
+
+.focus-hint {
+  margin: 0.75rem 0 0 0;
   font-size: 0.8rem;
   color: var(--color-text);
+  font-style: italic;
+  text-align: center;
 }
 
 /* Textarea */
@@ -611,6 +642,26 @@ const goBack = () => {
 .forge-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Modal Styles */

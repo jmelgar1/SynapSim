@@ -1,0 +1,1 @@
+Start the Spring Boot backend application with PostgreSQL database using `./mvnw spring-boot:run` from the `/home/melgar/SynapSim/backend` directory.

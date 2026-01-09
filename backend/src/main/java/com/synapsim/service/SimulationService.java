@@ -2,6 +2,8 @@ package com.synapsim.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.synapsim.dto.BrainNetworkDTO;
+import com.synapsim.dto.ConnectionEvidence;
+import com.synapsim.dto.ConnectionKey;
 import com.synapsim.dto.MentionedRegionDTO;
 import com.synapsim.dto.PubMedArticleDTO;
 import com.synapsim.dto.ScenarioRequest;
@@ -34,6 +36,7 @@ public class SimulationService {
     private final BrainNetworkService brainNetworkService;
     private final PubMedService pubMedService;
     private final ObjectMapper objectMapper;
+    private final BrainRegionContextValidator contextValidator;
 
     /**
      * Run a complete simulation based on scenario parameters
@@ -78,9 +81,17 @@ public class SimulationService {
             log.info("Found {} brain regions mentioned in research articles: {}",
                     mentionedRegionCodes.size(), mentionedRegionCodes);
 
-            // 5. Build filtered brain network graph with only mentioned regions
-            Graph<String, DefaultWeightedEdge> originalGraph = brainNetworkService.buildFilteredBrainGraph(mentionedRegionCodes);
-            Graph<String, DefaultWeightedEdge> modifiedGraph = brainNetworkService.buildFilteredBrainGraph(mentionedRegionCodes);
+            // 4.5. Extract connections between regions from research (NEW)
+            Map<ConnectionKey, ConnectionEvidence> researchConnections =
+                    pubMedService.extractConnectionsFromResearch(articles, mentionedRegionCodes, regionAliasMap);
+
+            log.info("Found {} connections between regions in research", researchConnections.size());
+
+            // 5. Build brain network graph with research-backed connections only
+            Graph<String, DefaultWeightedEdge> originalGraph = brainNetworkService.buildGraphFromResearchConnections(
+                    mentionedRegionCodes, researchConnections);
+            Graph<String, DefaultWeightedEdge> modifiedGraph = brainNetworkService.buildGraphFromResearchConnections(
+                    mentionedRegionCodes, researchConnections);
 
             // 6. Apply neuroplasticity changes to filtered graph
             Map<String, Map<String, Double>> changes = brainNetworkService.applyNeuroplasticityChanges(
@@ -206,7 +217,7 @@ public class SimulationService {
         scenario.setCompoundInspiration(request.getCompoundType());
         scenario.setTherapeuticSetting(request.getSettingType());
         scenario.setPrimaryBrainRegion(request.getPrimaryBrainRegion());
-        scenario.setSimulationDuration(request.getDurationType());
+        scenario.setResearchFocus(request.getResearchFocusType()); // Optional - can be null
         scenario.setIntegrationSteps(request.getIntegrationSteps());
         return scenario;
     }
@@ -217,14 +228,22 @@ public class SimulationService {
     private List<PubMedArticleDTO> searchRelevantResearch(Scenario scenario) {
         log.info("Searching PubMed for relevant research");
 
+        // Pass research focus to keyword generation (can be null)
         List<String> keywords = pubMedService.generateSearchKeywords(
                 scenario.getCompoundInspiration().getValue(),
                 scenario.getTherapeuticSetting().getValue(),
-                scenario.getPrimaryBrainRegion()
+                scenario.getPrimaryBrainRegion(),
+                scenario.getResearchFocus()
         );
 
         List<PubMedArticleDTO> articles = pubMedService.searchArticles(keywords);
         log.info("Found {} relevant articles", articles.size());
+
+        // Apply research focus boost ONLY if focus is selected
+        if (scenario.getResearchFocus() != null) {
+            articles = pubMedService.boostByResearchFocus(articles, scenario.getResearchFocus());
+            log.info("Applied research focus boost for: {}", scenario.getResearchFocus());
+        }
 
         return articles;
     }
@@ -406,44 +425,6 @@ public class SimulationService {
         return implications.toString();
     }
 
-    /**
-     * Build a map of region codes to their common aliases in research literature
-     */
-    private Map<String, List<String>> buildRegionAliasMap() {
-        Map<String, List<String>> aliases = new HashMap<>();
-
-        aliases.put("mPFC", List.of("medial prefrontal cortex", "mpfc", "prefrontal cortex", "pfc"));
-        aliases.put("PCC", List.of("posterior cingulate cortex", "pcc", "posterior cingulate", "default mode network", "dmn"));
-        aliases.put("AHP", List.of("hippocampus", "anterior hippocampus", "hippocampal"));
-        aliases.put("AMY", List.of("amygdala", "amygdalar"));
-        aliases.put("V1", List.of("visual cortex", "v1", "occipital cortex", "visual"));
-        aliases.put("A1", List.of("auditory cortex", "a1", "temporal cortex", "auditory"));
-        aliases.put("THL", List.of("thalamus", "thalamic"));
-        aliases.put("AMC", List.of("caudate", "anteromedial caudate", "striatum", "striatal"));
-        aliases.put("FP", List.of("frontoparietal", "frontoparietal network", "attention network", "parietal"));
-        aliases.put("CBL", List.of("cerebellum", "cerebellar"));
-
-        return aliases;
-    }
-
-    /**
-     * Get full region name from code
-     */
-    private String getRegionName(String code) {
-        Map<String, String> codeToName = Map.ofEntries(
-                Map.entry("mPFC", "Medial Prefrontal Cortex"),
-                Map.entry("PCC", "Posterior Cingulate Cortex"),
-                Map.entry("AHP", "Anterior Hippocampus"),
-                Map.entry("AMY", "Amygdala"),
-                Map.entry("V1", "Visual Cortex"),
-                Map.entry("A1", "Auditory Cortex"),
-                Map.entry("THL", "Thalamus"),
-                Map.entry("AMC", "Anteromedial Caudate"),
-                Map.entry("FP", "Frontoparietal Regions"),
-                Map.entry("CBL", "Cerebellum")
-        );
-        return codeToName.getOrDefault(code, code);
-    }
 
     /**
      * Extract mentioned brain regions from research articles with context
@@ -452,14 +433,15 @@ public class SimulationService {
             List<PubMedArticleDTO> articles,
             Set<String> mentionedRegionCodes
     ) {
-        Map<String, List<String>> regionAliases = buildRegionAliasMap();
+        // Use the shared alias map from BrainNetworkService for consistency
+        Map<String, List<String>> regionAliases = brainNetworkService.buildRegionAliasMap();
         Map<String, MentionedRegionDTO> regionMap = new HashMap<>();
 
         // Initialize DTOs for each mentioned region
         for (String regionCode : mentionedRegionCodes) {
             MentionedRegionDTO dto = MentionedRegionDTO.builder()
                     .regionCode(regionCode)
-                    .regionName(getRegionName(regionCode))
+                    .regionName(brainNetworkService.getRegionName(regionCode))
                     .mentions(new ArrayList<>())
                     .build();
             regionMap.put(regionCode, dto);
@@ -479,23 +461,46 @@ public class SimulationService {
             for (String regionCode : mentionedRegionCodes) {
                 List<String> aliases = regionAliases.getOrDefault(regionCode, List.of(regionCode.toLowerCase()));
 
+                boolean mentionAdded = false;
+
                 // Find sentences mentioning this region
-                for (String alias : aliases) {
-                    if (lowerText.contains(alias.toLowerCase())) {
-                        // Extract relevant excerpt containing the region mention
-                        String excerpt = extractExcerpt(combinedText, alias);
-                        String context = determineContext(excerpt);
+                aliasLoop: for (String alias : aliases) {
+                    if (mentionAdded) {
+                        break; // Already found a mention for this region in this article
+                    }
 
-                        if (excerpt != null && !excerpt.isEmpty()) {
-                            MentionedRegionDTO.ResearchMention mention = MentionedRegionDTO.ResearchMention.builder()
-                                    .articleTitle(article.getTitle())
-                                    .pubmedId(article.getPubmedId())
-                                    .excerpt(excerpt)
-                                    .context(context)
-                                    .build();
+                    String normalizedAlias = alias.toLowerCase().trim();
 
-                            regionMap.get(regionCode).addMention(mention);
-                            break; // Only one mention per article per region
+                    // Use word boundary matching to avoid partial matches
+                    String regex = "\\b" + java.util.regex.Pattern.quote(normalizedAlias) + "\\b";
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex).matcher(lowerText);
+
+                    while (matcher.find()) {
+                        int matchPosition = matcher.start();
+
+                        // Validate with context analysis to filter out false positives
+                        if (contextValidator.isValidBrainRegionMention(
+                                combinedText,
+                                matchPosition,
+                                normalizedAlias,
+                                alias.length())) {
+
+                            // Extract relevant excerpt containing the region mention
+                            String excerpt = extractExcerpt(combinedText, alias);
+                            String context = determineContext(excerpt);
+
+                            if (excerpt != null && !excerpt.isEmpty()) {
+                                MentionedRegionDTO.ResearchMention mention = MentionedRegionDTO.ResearchMention.builder()
+                                        .articleTitle(article.getTitle())
+                                        .pubmedId(article.getPubmedId())
+                                        .excerpt(excerpt)
+                                        .context(context)
+                                        .build();
+
+                                regionMap.get(regionCode).addMention(mention);
+                                mentionAdded = true;
+                                break aliasLoop; // Exit both loops - only one mention per article per region
+                            }
                         }
                     }
                 }
